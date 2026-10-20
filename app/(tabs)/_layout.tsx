@@ -1,10 +1,13 @@
 import { Tabs } from "expo-router";
+import { DemoSessionProvider } from "@/lib/demo-session";
 
 export default function TabLayout() {
-  return (
-    <Tabs>
-      <Tabs.Screen name="index" options={{ title: "Browse" }} />
-      <Tabs.Screen name="Matches" options={{ title: "Matches" }} />
-    </Tabs>
-  );
+	return (
+		<DemoSessionProvider>
+			<Tabs>
+				<Tabs.Screen name="index" options={{ title: "Browse" }} />
+				<Tabs.Screen name="Matches" options={{ title: "Matches" }} />
+			</Tabs>
+		</DemoSessionProvider>
+	);
 }

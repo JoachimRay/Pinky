@@ -8,22 +8,27 @@ import {Pressable, StyleSheet, View} from "react-native";
 
 import dummy from "@/data/dummy.json";
 import type {Profile} from "@/types/profile";
+import {useDemoSession} from "@/lib/demo-session";
 
 const profiles: Profile[] = dummy;
 
 export default function CardStack() {
 	const [index, setIndex] = useState(0);
+	const [newMatch, setNewMatch] = useState<Profile | null>(null);
+	const {decide} = useDemoSession();
 	const item = profiles[index];
 
 	function goToNext() {
 		setIndex((currentIndex) => currentIndex + 1);
 	}
 
-	function handlePass() {
+	function handlePass(profile: Profile) {
+		decide(profile, "pass");
 		goToNext();
 	}
 
-	function handleViolet() {
+	function handleViolet(profile: Profile) {
+		if (decide(profile, "like")) setNewMatch(profile);
 		goToNext();
 	}
 
@@ -66,7 +71,7 @@ export default function CardStack() {
 			</View>
 			<View className="flex-row justify-center gap-[38px]">
 				<Pressable
-					onPress={handlePass}
+					onPress={() => handlePass(item)}
 					accessibilityRole="button"
 					accessibilityLabel={`Pass on ${item.name}`}
 					className="items-center gap-[5px] active:opacity-70">
@@ -76,7 +81,7 @@ export default function CardStack() {
 					<Text className="text-xs text-ink">Pass</Text>
 				</Pressable>
 				<Pressable
-					onPress={handleViolet}
+					onPress={() => handleViolet(item)}
 					accessibilityRole="button"
 					accessibilityLabel={`Send a violet to ${item.name}`}
 					className="items-center gap-[5px] active:opacity-70">
@@ -86,6 +91,15 @@ export default function CardStack() {
 					<Text className="text-xs text-ink">Violet</Text>
 				</Pressable>
 			</View>
+			{newMatch && (
+				<View accessibilityRole="alert" className="rounded-2xl bg-violet px-5 py-4">
+					<Text className="font-serif text-xl text-white">It’s a match!</Text>
+					<Text className="mt-1 text-sm text-white">You and {newMatch.name} liked each other.</Text>
+					<Pressable onPress={() => setNewMatch(null)} accessibilityRole="button" accessibilityLabel="Dismiss match notice" className="mt-3 self-start">
+						<Text className="text-sm text-white underline">Keep browsing</Text>
+					</Pressable>
+				</View>
+			)}
 		</View>
 	);
 }

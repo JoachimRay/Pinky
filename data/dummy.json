@@ -10,6 +10,7 @@
 		"id": 2,
 		"name": "Jane Smith",
 		"age": 28,
+		"mutualLike": true,
 		"bio": "Animes, Manga, Dave",
 		"interests": ["painting", "music", "hiking"]
 	},

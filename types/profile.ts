@@ -5,4 +5,5 @@ export type Profile = {
 	bio: string;
 	interests: string[];
 	image?: string;
+	mutualLike?: boolean;
 };
