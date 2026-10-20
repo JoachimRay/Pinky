@@ -8,6 +8,9 @@ node_modules/
 dist/
 web-build/
 expo-env.d.ts
+.expo-image-debug
+.expo-web-image-debug
+.expo-web-image-fit-check
 
 # Native
 .kotlin/
