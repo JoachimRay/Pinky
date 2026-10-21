@@ -1,10 +1,27 @@
 import palette from "@/constants/palette";
 import {DemoSessionProvider} from "@/lib/demo-session";
 import {Tabs} from "expo-router";
-import {StyleSheet, View} from "react-native";
+import {StyleSheet, Text, View, type ColorValue} from "react-native";
 
 import {LayersIcon} from "@/components/icons/LayersIcon";
 import {VioletOutlineIcon} from "@/components/icons/VioletOutlineIcon";
+
+function tabLabel(text: string) {
+	return function TabLabel({
+		focused,
+		color,
+	}: {
+		focused: boolean;
+		color: ColorValue;
+	}) {
+		return (
+			<Text
+				style={[styles.tabLabel, {color}, focused && styles.tabLabelActive]}>
+				{text}
+			</Text>
+		);
+	};
+}
 
 export default function TabLayout() {
 	return (
@@ -21,8 +38,8 @@ export default function TabLayout() {
 				<Tabs.Screen
 					name="index"
 					options={{
-						title: "Discover",
-						tabBarAccessibilityLabel: "Browse Profiles",
+						tabBarLabel: tabLabel("Discover"),
+						tabBarAccessibilityLabel: "Discover Profiles",
 						tabBarIcon: ({focused, color}) => (
 							<View style={[styles.pill, focused && styles.pillActive]}>
 								<LayersIcon color={color} />
@@ -33,8 +50,8 @@ export default function TabLayout() {
 				<Tabs.Screen
 					name="violets"
 					options={{
-						title: "Violets",
-						tabBarAccessibilityLabel: "Your matches",
+						tabBarLabel: tabLabel("Violets"),
+						tabBarAccessibilityLabel: "Your Violets",
 						tabBarIcon: ({focused, color}) => (
 							<View style={[styles.pill, focused && styles.pillActive]}>
 								<VioletOutlineIcon color={color} />
@@ -54,10 +71,6 @@ const styles = StyleSheet.create({
 		borderTopWidth: 1,
 		paddingTop: 10,
 	},
-	tabLabel: {
-		fontSize: 10,
-		marginTop: 5,
-	},
 	iconSlot: {
 		width: 46,
 		height: 29,
@@ -71,5 +84,13 @@ const styles = StyleSheet.create({
 	},
 	pillActive: {
 		backgroundColor: palette.cream,
+	},
+	tabLabel: {
+		fontFamily: "Inter_400Regular",
+		fontSize: 10,
+		marginTop: 5,
+	},
+	tabLabelActive: {
+		fontFamily: "Inter_600SemiBold",
 	},
 });
