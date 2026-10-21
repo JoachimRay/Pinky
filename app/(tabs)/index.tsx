@@ -9,9 +9,7 @@ export default function HomeScreen() {
 	return (
 		<View className="flex-1 bg-shell" style={{paddingTop: insets.top}}>
 			<BrowseHeader />
-			<View className="flex-1 items-center justify-center">
-				<CardStack />
-			</View>
+			<CardStack />
 		</View>
 	);
 }
