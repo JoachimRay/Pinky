@@ -21,7 +21,7 @@ export default function TabLayout() {
 				<Tabs.Screen
 					name="index"
 					options={{
-						title: "Browse",
+						title: "Discover",
 						tabBarAccessibilityLabel: "Browse Profiles",
 						tabBarIcon: ({focused, color}) => (
 							<View style={[styles.pill, focused && styles.pillActive]}>
@@ -31,9 +31,9 @@ export default function TabLayout() {
 					}}
 				/>
 				<Tabs.Screen
-					name="Matches"
+					name="violets"
 					options={{
-						title: "Matches",
+						title: "Violets",
 						tabBarAccessibilityLabel: "Your matches",
 						tabBarIcon: ({focused, color}) => (
 							<View style={[styles.pill, focused && styles.pillActive]}>
