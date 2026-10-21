@@ -6,7 +6,7 @@ import {Pressable, View} from "react-native";
 export function BrowseHeader() {
 	return (
 		<View className="gap-3 px-5">
-			<View className="flex-row items-center justify-between">
+			<View className="h-[46px] flex-row items-center justify-between">
 				<View accessible accessibilityRole="header" accessibilityLabel="Pinky">
 					<Text className="font-serif text-[29px] text-wine">Pınky</Text>
 					<PinkyMarkIcon style={{position: "absolute", left: 16, top: 3.5}} />
