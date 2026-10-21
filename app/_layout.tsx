@@ -1,5 +1,6 @@
 import { Inter_400Regular } from "@expo-google-fonts/inter";
 import { Lora_400Regular, useFonts } from "@expo-google-fonts/lora";
+import { DemoSessionProvider } from "@/lib/demo-session";
 import { Stack } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 import { useEffect } from "react";
@@ -27,5 +28,9 @@ export default function RootLayout() {
     return null;
   }
 
-  return <Stack screenOptions={{ headerShown: false }} />;
+  return (
+    <DemoSessionProvider>
+      <Stack screenOptions={{ headerShown: false }} />
+    </DemoSessionProvider>
+  );
 }
