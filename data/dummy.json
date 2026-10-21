@@ -23,18 +23,18 @@
 	},
 	{
 		"id": 4,
-		"name": "LeBronita James",
-		"age": 41,
+		"name": "Chloe Ostertag",
+		"age": 24,
 		"bio": "Chasing rings",
 		"interests": ["reading", "wine tasting", "chess"],
 		"mutualLike": true
 	},
 	{
 		"id": 5,
-		"name": "Karen Durant",
-		"age": 39,
-		"bio": "Ball is life",
-		"interests": ["cars", "basketball", "siomai"]
+		"name": "Karen Bird",
+		"age": 30,
+		"bio": "Roses are red, violets are blue",
+		"interests": ["cars", "anime", "siomai"]
 	},
 	{
 		"id": 6,
@@ -53,7 +53,7 @@
 	},
 	{
 		"id": 8,
-		"name": "Adolfina Johnson",
+		"name": "Phoebe Johnson",
 		"age": 23,
 		"bio": "Reality is illusion",
 		"interests": ["cooking", "reading", "museums"]
