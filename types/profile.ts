@@ -6,4 +6,9 @@ export type Profile = {
 	interests: string[];
 	image?: string;
 	mutualLike?: boolean;
+	pronouns?: string;
+	orientation?: string;
+	distance?: string;
+	intention?: string;
+	verified?: boolean;
 };

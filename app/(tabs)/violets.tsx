@@ -11,7 +11,7 @@ export default function MatchesScreen() {
 		<ScrollView
 			className="flex-1 bg-shell"
 			contentContainerClassName="flex-grow px-6 pb-10"
-			contentContainerStyle={{paddingTop: insets.top + 24}}>
+			contentContainerStyle={{paddingTop: insets.top + 8}}>
 			<View className="mb-8 gap-2">
 				<Text className="font-serif text-4xl text-wine">Your violets</Text>
 				<Text className="text-sm text-ink">People who liked you back.</Text>
