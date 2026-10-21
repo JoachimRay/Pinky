@@ -3,7 +3,7 @@ import {SlidersIcon} from "@/components/icons/SlidersIcon";
 import {Text} from "@/components/ui/text";
 import {Pressable, View} from "react-native";
 
-export function BrowseHeader() {
+export function DiscoverHeader() {
 	return (
 		<View className="gap-3 px-5">
 			<View className="h-[46px] flex-row items-center justify-between">
