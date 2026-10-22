@@ -95,27 +95,9 @@ export default function ChatConversationScreen() {
   const [isSuggestionsVisible, setIsSuggestionsVisible] = useState(true);
   const [suggestionError, setSuggestionError] = useState("");
   const [isRewriting, setIsRewriting] = useState(false);
-  const [isMatchTyping, setIsMatchTyping] = useState(false);
   const [rewriteError, setRewriteError] = useState("");
   const generationLock = useRef(false);
-  const typingTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const canSend = draft.trim().length > 0;
-
-  const showMatchTyping = useCallback(() => {
-    if (typingTimer.current) clearTimeout(typingTimer.current);
-    setIsMatchTyping(true);
-    typingTimer.current = setTimeout(() => {
-      setIsMatchTyping(false);
-      typingTimer.current = null;
-    }, 1800);
-  }, []);
-
-  useEffect(
-    () => () => {
-      if (typingTimer.current) clearTimeout(typingTimer.current);
-    },
-    [],
-  );
 
   function goBackToChats() {
     if (router.canGoBack()) {
@@ -203,7 +185,6 @@ export default function ChatConversationScreen() {
     if (!rewriteSettings.enabled) {
       sendMessage(profile.id, trimmed);
       setDraft("");
-      showMatchTyping();
       return;
     }
 
@@ -229,7 +210,6 @@ export default function ChatConversationScreen() {
 
       sendMessage(profile.id, result.message.trim(), rewriteSettings.style);
       setDraft("");
-      showMatchTyping();
     } catch (error) {
       console.error("[rewrite] request failed", error);
       setRewriteError(
@@ -376,7 +356,7 @@ export default function ChatConversationScreen() {
           );
         })}
 
-        {isMatchTyping ? <TypingBubble name={profile.name} /> : null}
+        {isRewriting ? <TypingBubble /> : null}
 
         <View
           accessibilityLabel="Suggested message choices"
@@ -576,7 +556,7 @@ export default function ChatConversationScreen() {
   );
 }
 
-function TypingBubble({ name }: { name: string }) {
+function TypingBubble() {
   const [dotAnimations] = useState(() => [
     new Animated.Value(0.35),
     new Animated.Value(0.35),
@@ -609,7 +589,7 @@ function TypingBubble({ name }: { name: string }) {
   return (
     <View
       style={styles.typingBubble}
-      accessibilityLabel={`${name} is typing`}
+      accessibilityLabel="AI is rewriting your message"
       accessibilityLiveRegion="polite"
     >
       {dotAnimations.map((value, index) => (
@@ -727,7 +707,7 @@ const styles = StyleSheet.create({
     borderBottomLeftRadius: 5,
   },
   typingBubble: {
-    alignSelf: "flex-start",
+    alignSelf: "flex-end",
     flexDirection: "row",
     alignItems: "center",
     gap: 5,
@@ -735,7 +715,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 15,
     paddingVertical: 14,
     borderRadius: 24,
-    borderBottomLeftRadius: 5,
+    borderBottomRightRadius: 5,
     backgroundColor: palette.bubble,
   },
   typingDot: {

@@ -10,19 +10,19 @@ import type { Profile } from "@/types/profile";
 import { LinearGradient } from "expo-linear-gradient";
 import { router } from "expo-router";
 import {
-	useCallback,
-	useEffect,
-	useLayoutEffect,
-	useRef,
-	useState,
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
 } from "react";
 import {
-	Animated,
-	PanResponder,
-	Pressable,
-	StyleSheet,
-	useWindowDimensions,
-	View,
+  Animated,
+  PanResponder,
+  Pressable,
+  StyleSheet,
+  useWindowDimensions,
+  View,
 } from "react-native";
 
 const profiles: Profile[] = dummy;
@@ -70,12 +70,18 @@ export default function CardStack() {
           isAnimating.current = false;
           return;
         }
+        // The next profile reuses these animated values. Reset them before
+        // changing the index so it never renders at the outgoing card's
+        // off-screen position for a frame.
+        position.setValue({ x: 0, y: 0 });
+        cardEntryProgress.setValue(0);
+        nextCardProgress.setValue(0);
         setIndex((currentIndex) => currentIndex + 1);
         setNewMatch(matched ? profile : null);
         isAnimating.current = false;
       });
     },
-    [decide, position, width],
+    [cardEntryProgress, decide, nextCardProgress, position, width],
   );
   const latestItem = useRef(item);
   const latestFinishSwipe = useRef(finishSwipe);
@@ -276,25 +282,28 @@ export default function CardStack() {
 
   return (
     <View className="w-full max-w-[460px] flex-1 self-center gap-3 px-5 pb-2 pt-3">
-      <View className="relative w-full flex-1">
+      <View className="relative w-full flex-1 overflow-hidden rounded-3xl">
         {profiles[index + 1] ? (
           <Animated.View
             pointerEvents="none"
             className="absolute inset-0 overflow-hidden rounded-3xl"
-            style={{
-              opacity: nextCardProgress.interpolate({
-                inputRange: [0, 1],
-                outputRange: [0.72, 1],
-              }),
-              transform: [
-                {
-                  scale: nextCardProgress.interpolate({
-                    inputRange: [0, 1],
-                    outputRange: [0.94, 1],
-                  }),
-                },
-              ],
-            }}
+            style={[
+              styles.card,
+              {
+                opacity: nextCardProgress.interpolate({
+                  inputRange: [0, 1],
+                  outputRange: [0.72, 1],
+                }),
+                transform: [
+                  {
+                    scale: nextCardProgress.interpolate({
+                      inputRange: [0, 1],
+                      outputRange: [0.94, 1],
+                    }),
+                  },
+                ],
+              },
+            ]}
           >
             {cardContent(profiles[index + 1])}
           </Animated.View>
