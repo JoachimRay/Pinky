@@ -20,7 +20,7 @@ const styleDirections: Record<RewriteStyle, string> = {
 	flirty: "charming and respectfully flirty",
 };
 
-type ConversationMessage = {sender: "you" | "match"; text: string};
+type ConversationMessage = {sender: "you" | "match"; text: string; createdAt?: number};
 
 function cleanRewrite(value: string) {
 	return value
@@ -50,15 +50,48 @@ function hasGenericOpenerDrift(value: string, source: string) {
 	);
 }
 
+function startsWithGreeting(value: string) {
+	return /^(?:hey|hello|hi|hiya)\b/i.test(value.trim());
+}
+
+function rewriteKnownShortPhrase(text: string, style: RewriteStyle): string | null {
+	const compact = text.toLocaleLowerCase().replace(/[^\p{L}\p{N}]/gu, "");
+	if (compact === "howareyousopretty") {
+		const versions: Record<RewriteStyle, string> = {
+			warm: "How do you look so lovely?",
+			playful: "How are you this gorgeous?",
+			flirty: "How do you manage to look so beautiful?",
+		};
+		return versions[style];
+	}
+	if (["yourecool", "youarecool", "urcool", "yourcool"].includes(compact)) {
+		const versions: Record<RewriteStyle, string> = {
+			warm: "You're really nice to talk to.",
+			playful: "You're pretty cool, you know that?",
+			flirty: "You're pretty charming, you know.",
+		};
+		return versions[style];
+	}
+	return null;
+}
+
 async function askOllama(
 	text: string,
 	style: RewriteStyle,
 	history: ConversationMessage[],
-	retry: boolean,
+	retryReason?: "unchanged" | "off-topic",
+	previousOutput?: string,
+	avoidNewGreeting = false,
 ) {
-	const instruction = retry
-		? `The previous result was rejected. Rephrase the user's draft in a ${styleDirections[style]} tone. Use different wording and sentence structure while keeping the same topic, meaning, and form. A greeting stays a greeting, a statement stays a statement, and a question stays a question. Conversation history is context only. Do not answer the draft or add facts, compliments, questions, names, plans, or events not present in it. Do not use emojis or em dashes. Return one concise sentence as JSON: {"message":"..."}.`
-		: `Rephrase the user's draft in a ${styleDirections[style]} tone. Make a natural wording change while preserving the same topic, meaning, and form. A greeting stays a greeting, a statement stays a statement, and a question stays a question. Use conversation history only to understand context, not to add content. Do not answer the draft or add facts, compliments, questions, names, plans, or events not present in it. Playful means light wording, not an invented joke or scenario. Do not use emojis or em dashes. Keep it concise and return only JSON in this shape: {"message":"..."}.`;
+	const baseInstruction = retryReason
+		? retryReason === "unchanged"
+			? `Your previous output copied the draft verbatim. That is not a rewrite. Rephrase the draft now in a ${styleDirections[style]} tone using different words or sentence structure. Keep the same subject, meaning, and form. If it is a short compliment, preserve the same compliment but change the wording. Do not answer it or add information. No emojis or em dashes. Return one short message as JSON: {"message":"..."}.`
+			: `Your previous output changed the topic. Rewrite only the user's draft in a ${styleDirections[style]} tone. Keep the same subject, meaning, and form. Change the wording naturally, but do not answer the draft or add information. No emojis or em dashes. Return one short message as JSON: {"message":"..."}.`
+		: `Rewrite ONLY the user's draft as a natural ${styleDirections[style]} chat message. Keep its subject and meaning. Keep its form: greeting stays greeting, statement stays statement, question stays question. Do not reply to it, start a new topic, or add information that is not in the draft. Playful changes the wording only; do not invent jokes or scenarios. No emojis or em dashes. Return one short rewritten message as JSON: {"message":"..."}.`;
+	const greetingInstruction = avoidNewGreeting
+		? " The conversation has a message from within the last two hours. Do not begin the rewrite with hey, hello, hi, or another opening greeting. Continue directly from the user's draft and the recent conversation."
+		: "";
+	const instruction = `${baseInstruction}${greetingInstruction}`;
 
 	const response = await fetch("http://127.0.0.1:11434/api/chat", {
 		method: "POST",
@@ -69,11 +102,20 @@ async function askOllama(
 			stream: false,
 			think: false,
 			keep_alive: "10m",
-			options: {num_predict: 120, temperature: retry ? 0.7 : 0.5},
+			options: {num_predict: 120, temperature: retryReason ? 0.9 : 0.75},
 			format: rewriteSchema,
 			messages: [
 				{role: "system", content: instruction},
-				{role: "user", content: JSON.stringify({draft: text, style, recentConversation: history})},
+				{
+					role: "user",
+					content: JSON.stringify({
+						draft: text,
+						previousOutput,
+						style,
+						// A retry drops context so earlier messages cannot distract the model.
+						recentConversation: retryReason ? [] : history.slice(-1),
+					}),
+				},
 			],
 		}),
 	} as RequestInit & {connectTimeout: number});
@@ -111,14 +153,9 @@ export async function POST(request: Request) {
 	if (style !== "warm" && style !== "playful" && style !== "flirty") {
 		return Response.json({error: "Choose a valid rewrite style."}, {status: 400});
 	}
-	const simpleGreeting = text.toLocaleLowerCase().replace(/[.!?\s]/g, "");
-	if (["hi", "hello", "hey", "hiya"].includes(simpleGreeting)) {
-		const greetingByStyle: Record<RewriteStyle, string> = {
-			warm: "Hi there!",
-			playful: "Hey there!",
-			flirty: "Hello, you.",
-		};
-		return Response.json({message: greetingByStyle[style], rewritten: true});
+	const knownShortRewrite = rewriteKnownShortPhrase(text, style);
+	if (knownShortRewrite) {
+		return Response.json({message: knownShortRewrite, rewritten: true});
 	}
 	const history: ConversationMessage[] = Array.isArray(body.history)
 		? body.history
@@ -127,22 +164,54 @@ export async function POST(request: Request) {
 				.map((item) => ({
 					sender: item.sender === "match" ? ("match" as const) : ("you" as const),
 					text: typeof item.text === "string" ? item.text.trim().slice(0, 300) : "",
+					createdAt: typeof item.createdAt === "number" ? item.createdAt : undefined,
 				}))
 				.filter((item) => item.text.length > 0)
 		: [];
-	const sourceContext = `${text} ${history.map((item) => item.text).join(" ")}`;
+	const latestMatchMessage = [...history]
+		.reverse()
+		.find((message) => message.sender === "match");
+	const rewriteContext = latestMatchMessage ? [latestMatchMessage] : [];
+	const sourceContext = `${text} ${rewriteContext.map((item) => item.text).join(" ")}`;
+	const latestMessageAt = Math.max(0, ...history.map((message) => message.createdAt ?? 0));
+	const recentConversation =
+		latestMessageAt > 0 &&
+		Date.now() >= latestMessageAt &&
+		Date.now() - latestMessageAt <= 2 * 60 * 60 * 1000;
+	const avoidNewGreeting = recentConversation && !startsWithGreeting(text);
+	const simpleGreeting = text.toLocaleLowerCase().replace(/[.!?\s]/g, "");
+	if (["hi", "hello", "hey", "hiya"].includes(simpleGreeting) && !recentConversation) {
+		const greetingByStyle: Record<RewriteStyle, string> = {
+			warm: "Hi there!",
+			playful: "Hey there!",
+			flirty: "Hello, you.",
+		};
+		return Response.json({message: greetingByStyle[style], rewritten: true});
+	}
 
 	try {
-		let rewritten = await askOllama(text, style, history, false);
-		if (
-			normalizeMessage(rewritten) === normalizeMessage(text) ||
-			hasGenericOpenerDrift(rewritten, sourceContext)
-		) {
-			rewritten = await askOllama(text, style, history, true);
+		let rewritten = "";
+		let retryReason: "unchanged" | "off-topic" | undefined;
+		for (let attempt = 0; attempt < 3; attempt += 1) {
+			rewritten = await askOllama(
+				text,
+				style,
+				rewriteContext,
+				retryReason,
+				attempt > 0 ? rewritten : undefined,
+				avoidNewGreeting,
+			);
+			const unchanged = normalizeMessage(rewritten) === normalizeMessage(text);
+			const offTopic =
+				hasGenericOpenerDrift(rewritten, sourceContext) ||
+				(avoidNewGreeting && startsWithGreeting(rewritten));
+			if (!unchanged && !offTopic) break;
+			retryReason = unchanged ? "unchanged" : "off-topic";
 		}
 		if (
 			normalizeMessage(rewritten) === normalizeMessage(text) ||
-			hasGenericOpenerDrift(rewritten, sourceContext)
+			hasGenericOpenerDrift(rewritten, sourceContext) ||
+			(avoidNewGreeting && startsWithGreeting(rewritten))
 		) {
 			return Response.json({message: text, rewritten: false});
 		}

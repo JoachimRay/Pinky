@@ -104,6 +104,7 @@ export default function ChatConversationScreen() {
   const [suggestionError, setSuggestionError] = useState("");
   const [isRewriting, setIsRewriting] = useState(false);
   const [rewriteError, setRewriteError] = useState("");
+  const [rewriteNeedsChoice, setRewriteNeedsChoice] = useState(false);
   const generationLock = useRef(false);
   const canSend = draft.trim().length > 0;
 
@@ -203,6 +204,7 @@ export default function ChatConversationScreen() {
 
     setIsRewriting(true);
     setRewriteError("");
+    setRewriteNeedsChoice(false);
     try {
       const response = await fetch("/api/rewrite", {
         method: "POST",
@@ -210,7 +212,15 @@ export default function ChatConversationScreen() {
         body: JSON.stringify({
           text: trimmed,
           style: rewriteSettings.style,
-          history: conversationHistory.map(({ sender, text }) => ({ sender, text })),
+          history: conversationHistory.map(({ sender, text, createdAt, id: messageId }) => ({
+            sender,
+            text,
+            createdAt:
+              createdAt ??
+              (Number.isFinite(Number(messageId.split("-")[0]))
+                ? Number(messageId.split("-")[0])
+                : undefined),
+          })),
         }),
       });
       if (!response.ok) {
@@ -227,21 +237,31 @@ export default function ChatConversationScreen() {
 
       if (result.rewritten) {
         sendMessage(profile.id, result.message.trim(), rewriteSettings.style);
+        setDraft("");
       } else {
-        sendMessage(profile.id, trimmed);
         setRewriteError(
-          "AI couldn't safely rewrite that, so your original message was sent.",
+          "AI couldn't safely rewrite this draft. Choose how you want to continue.",
         );
+        setRewriteNeedsChoice(true);
       }
-      setDraft("");
     } catch (error) {
       console.error("[rewrite] request failed", error);
       setRewriteError(
-        "Could not rewrite your message. Your draft is still here.",
+        "AI rewrite failed. Your draft is still here. Choose how you want to continue.",
       );
+      setRewriteNeedsChoice(true);
     } finally {
       setIsRewriting(false);
     }
+  }
+
+  function sendOriginalDraft() {
+    const trimmed = draft.trim();
+    if (!profile || !trimmed || isRewriting) return;
+    sendMessage(profile.id, trimmed);
+    setDraft("");
+    setRewriteError("");
+    setRewriteNeedsChoice(false);
   }
 
   if (!isHydrated) {
@@ -545,10 +565,37 @@ export default function ChatConversationScreen() {
           </Text>
         ) : null}
 
+        {rewriteNeedsChoice ? (
+          <View style={styles.rewriteActions}>
+            <Pressable
+              accessibilityRole="button"
+              disabled={isRewriting}
+              onPress={sendOriginalDraft}
+              style={[styles.rewriteActionButton, styles.sendOriginalButton]}
+            >
+              <Text style={styles.sendOriginalText}>Send original</Text>
+            </Pressable>
+            <Pressable
+              accessibilityRole="button"
+              disabled={isRewriting}
+              onPress={handleSendMessage}
+              style={[styles.rewriteActionButton, styles.retryRewriteButton]}
+            >
+              <Text style={styles.retryRewriteText}>
+                {isRewriting ? "Retrying…" : "Retry AI"}
+              </Text>
+            </Pressable>
+          </View>
+        ) : null}
+
         <View style={styles.composer}>
           <TextInput
             value={draft}
-            onChangeText={setDraft}
+            onChangeText={(value) => {
+              setDraft(value);
+              setRewriteError("");
+              setRewriteNeedsChoice(false);
+            }}
             placeholder={`Message ${profile.name}…`}
             placeholderTextColor={palette.muted}
             multiline
@@ -955,6 +1002,38 @@ const styles = StyleSheet.create({
     fontFamily: "Inter_400Regular",
     fontSize: 11,
     color: palette.rose,
+  },
+  rewriteActions: {
+    flexDirection: "row",
+    gap: 8,
+    paddingHorizontal: 20,
+    marginBottom: 10,
+  },
+  rewriteActionButton: {
+    flex: 1,
+    minHeight: 40,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 12,
+    borderRadius: 12,
+  },
+  sendOriginalButton: {
+    backgroundColor: "#FFFFFF",
+    borderWidth: 1,
+    borderColor: palette.line,
+  },
+  sendOriginalText: {
+    fontFamily: "Inter_600SemiBold",
+    fontSize: 12,
+    color: palette.ink,
+  },
+  retryRewriteButton: {
+    backgroundColor: palette.wine,
+  },
+  retryRewriteText: {
+    fontFamily: "Inter_600SemiBold",
+    fontSize: 12,
+    color: "#FFFFFF",
   },
   composer: {
     flexDirection: "row",

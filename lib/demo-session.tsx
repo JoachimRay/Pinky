@@ -17,6 +17,7 @@ export type ChatMessage = {
 	id: string;
 	sender: "you" | "match" | "system";
 	text: string;
+	createdAt?: number;
 	rewriteStyle?: RewriteStyle;
 };
 
@@ -137,6 +138,7 @@ export function DemoSessionProvider({ children }: { children: React.ReactNode })
 						id: `${Date.now()}-${Math.random()}`,
 						sender: "you",
 						text: trimmed,
+						createdAt: Date.now(),
 						...(rewriteStyle ? {rewriteStyle} : {}),
 					},
 				],
@@ -169,6 +171,7 @@ export function DemoSessionProvider({ children }: { children: React.ReactNode })
 							id: `system-${Date.now()}-${Math.random()}`,
 							sender: "system",
 							text: notice,
+							createdAt: Date.now(),
 						},
 					],
 				},
@@ -200,6 +203,7 @@ export function DemoSessionProvider({ children }: { children: React.ReactNode })
 									id: `system-${Date.now()}-${Math.random()}`,
 									sender: "system",
 									text: `AI rewrite style changed to ${style}.`,
+									createdAt: Date.now(),
 								},
 							],
 						}
@@ -219,6 +223,7 @@ export function DemoSessionProvider({ children }: { children: React.ReactNode })
 	}, []);
 
 	const seedDemoConversation = useCallback((profile: Profile) => {
+		const createdAt = Date.now();
 		setSession((current) => ({
 			...current,
 			matches: current.matches.some((match) => match.id === profile.id)
@@ -227,9 +232,9 @@ export function DemoSessionProvider({ children }: { children: React.ReactNode })
 			messagesByMatchId: {
 				...current.messagesByMatchId,
 				[profile.id]: [
-					{ id: "demo-you-1", sender: "you", text: "I have a project presentation coming up soon." },
-					{ id: "demo-match-1", sender: "match", text: "That sounds like a big week. What is the presentation about?" },
-					{ id: "demo-you-2", sender: "you", text: "It is about a community garden app I have been designing." },
+					{ id: "demo-you-1", sender: "you", text: "I have a project presentation coming up soon.", createdAt },
+					{ id: "demo-match-1", sender: "match", text: "That sounds like a big week. What is the presentation about?", createdAt },
+					{ id: "demo-you-2", sender: "you", text: "It is about a community garden app I have been designing.", createdAt },
 				],
 			},
 			suggestionSetsByMatchId: {
