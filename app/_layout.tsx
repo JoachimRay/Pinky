@@ -1,5 +1,5 @@
 import { DemoSessionProvider } from "@/lib/demo-session";
-import { Inter_400Regular } from "@expo-google-fonts/inter";
+import { Inter_400Regular, Inter_600SemiBold } from "@expo-google-fonts/inter";
 import { Lora_400Regular, useFonts } from "@expo-google-fonts/lora";
 import { Stack } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";

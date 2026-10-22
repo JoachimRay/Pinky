@@ -51,7 +51,7 @@ export default function TabLayout() {
           }}
         />
         <Tabs.Screen
-          name="chat"
+					name="Chat_Logs"
           options={{
             tabBarLabel: tabLabel("Chat"),
             tabBarAccessibilityLabel: "Your Chats",
