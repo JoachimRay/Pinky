@@ -1,5 +1,6 @@
-import AsyncStorage from "@react-native-async-storage/async-storage";
+import { localDateKey } from "@/lib/suggestions";
 import type { Profile } from "@/types/profile";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import {
 	createContext,
 	useCallback,
@@ -8,7 +9,6 @@ import {
 	useMemo,
 	useState,
 } from "react";
-import { localDateKey } from "@/lib/suggestions";
 
 export type Decision = "like" | "pass";
 export type RewriteStyle = "warm" | "playful" | "flirty";
