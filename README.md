@@ -1,8 +1,21 @@
 # Pinky
 
-> Inclusive, safety-minded dating connections for the LGBTQ+ community.
+<p align="center">
+  <img src="./docs/logos.png" alt="Pinky logo" width="220">
+</p>
 
-![Pinky](./docs/logos.png)
+<p align="center">
+  Inclusive, safety-minded dating connections for the LGBTQ+ community.
+</p>
+
+<p align="center">
+  <a href="https://expo.dev/"><img src="https://img.shields.io/badge/Expo-57-000020?logo=expo&logoColor=white" alt="Expo 57"></a>
+  <a href="https://reactnative.dev/"><img src="https://img.shields.io/badge/React%20Native-0.86-61DAFB?logo=react&logoColor=black" alt="React Native 0.86"></a>
+  <a href="https://www.typescriptlang.org/"><img src="https://img.shields.io/badge/TypeScript-6-3178C6?logo=typescript&logoColor=white" alt="TypeScript 6"></a>
+  <a href="https://ollama.com/"><img src="https://img.shields.io/badge/Ollama-local%20AI-111111" alt="Ollama local AI"></a>
+  <a href="https://openrouter.ai/"><img src="https://img.shields.io/badge/OpenRouter-AI%20gateway-6E56CF" alt="OpenRouter AI gateway"></a>
+  <a href="./LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue" alt="MIT license"></a>
+</p>
 
 Pinky is an Expo and React Native mobile application that helps LGBTQ+ people
 discover compatible connections through profile-based browsing, mutual likes,
@@ -56,9 +69,9 @@ flowchart TD
     Router --> Session[DemoSessionProvider]
     Session --> Storage[AsyncStorage]
     Session --> Profiles[Local profile data]
-    Router --> Suggestions[/api/suggestions]
-    Router --> Rewrite[/api/rewrite]
-    Router --> Opener[/api/opener]
+    Router --> Suggestions["/api/suggestions"]
+    Router --> Rewrite["/api/rewrite"]
+    Router --> Opener["/api/opener"]
     Suggestions --> Ollama[Local Ollama qwen3:4b]
     Rewrite --> Ollama
     Opener --> OpenRouter[OpenRouter chat API]
@@ -68,18 +81,18 @@ flowchart TD
 
 ### Component responsibilities
 
-| Component | Responsibility |
-| --- | --- |
-| Expo / React Native | Cross-platform mobile application runtime. |
-| Expo Router | File-based navigation for Discover, Chat, Violets, profiles, and conversations. |
-| `DemoSessionProvider` | Holds decisions, matches, messages, suggestions, and rewrite settings. |
-| AsyncStorage | Persists the local demo session between launches. |
-| Local JSON data | Supplies the demo profiles and profile metadata. |
-| `/api/suggestions` | Generates three opening or follow-up suggestions with Ollama, or curated fallbacks. |
-| `/api/rewrite` | Requests a safer rewrite of a drafted message through local Ollama. |
-| `/api/opener` | Generates one inclusive profile opener through OpenRouter, or a curated fallback. |
-| Ollama | Optional local model runtime for conversation suggestions and rewrites. |
-| OpenRouter | Optional remote model gateway for the profile opener. |
+| Component             | Responsibility                                                                      |
+| --------------------- | ----------------------------------------------------------------------------------- |
+| Expo / React Native   | Cross-platform mobile application runtime.                                          |
+| Expo Router           | File-based navigation for Discover, Chat, Violets, profiles, and conversations.     |
+| `DemoSessionProvider` | Holds decisions, matches, messages, suggestions, and rewrite settings.              |
+| AsyncStorage          | Persists the local demo session between launches.                                   |
+| Local JSON data       | Supplies the demo profiles and profile metadata.                                    |
+| `/api/suggestions`    | Generates three opening or follow-up suggestions with Ollama, or curated fallbacks. |
+| `/api/rewrite`        | Requests a safer rewrite of a drafted message through local Ollama.                 |
+| `/api/opener`         | Generates one inclusive profile opener through OpenRouter, or a curated fallback.   |
+| Ollama                | Optional local model runtime for conversation suggestions and rewrites.             |
+| OpenRouter            | Optional remote model gateway for the profile opener.                               |
 
 There is currently **no local WebSocket server**. The app uses Expo API routes
 and HTTP `fetch` requests.
