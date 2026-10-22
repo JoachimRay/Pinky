@@ -1,37 +1,25 @@
-import {ArrowUpRightIcon} from "@/components/icons/ArrowUpRightIcon";
-import {BadgeCheckIcon} from "@/components/icons/BadgeCheckIcon";
-import {VioletIcon} from "@/components/icons/VioletIcon";
-import {XIcon} from "@/components/icons/XIcon";
-import {Text} from "@/components/ui/text";
+import { ArrowUpRightIcon } from "@/components/icons/ArrowUpRightIcon";
+import { BadgeCheckIcon } from "@/components/icons/BadgeCheckIcon";
+import { VioletIcon } from "@/components/icons/VioletIcon";
+import { XIcon } from "@/components/icons/XIcon";
+import { Text } from "@/components/ui/text";
 
-import {LinearGradient} from "expo-linear-gradient";
-import {useState} from "react";
+import { LinearGradient } from "expo-linear-gradient";
+import { router } from "expo-router";
+import { useState } from "react";
 import {
 	Image,
 	Pressable,
 	StyleSheet,
 	View,
-	type ImageSourcePropType,
 } from "react-native";
 
 import dummy from "@/data/dummy.json";
-import {useDemoSession} from "@/lib/demo-session";
-import type {Profile} from "@/types/profile";
+import { profileImages } from "@/data/profile-images";
+import { useDemoSession } from "@/lib/demo-session";
+import type { Profile } from "@/types/profile";
 
 const profiles: Profile[] = dummy;
-
-const profileImages: Record<number, ImageSourcePropType> = {
-	1: require("../../assets/profiles/girl lq icon.jpg"),
-	2: require("../../assets/profiles/pexels-soc-nang-d-ng-2150345854-35718894.jpg"),
-	3: require("../../assets/profiles/pexels-quintin-alderman-1104905988-29637279.jpg"),
-	4: require("../../assets/profiles/Kendall.jpg"),
-	5: require("../../assets/profiles/pexels-doquyen-1520760.jpg"),
-	6: require("../../assets/profiles/pexels-kenzhar-sharap-125323072-19718654.jpg"),
-	7: require("../../assets/profiles/pexels-paperpilot-17550359.jpg"),
-	8: require("../../assets/profiles/pic1.jpg"),
-	9: require("../../assets/profiles/pexels-husamettin-akgun-1162768-3695844.jpg"),
-	10: require("../../assets/profiles/pexels-meowrian-7893962.jpg"),
-};
 
 function profileDetails(profile: Profile) {
 	const details = [
@@ -88,9 +76,12 @@ export default function CardStack() {
 
 	return (
 		<View className="w-full max-w-[460px] flex-1 self-center gap-3 px-5 pb-2 pt-3">
-			<View
+			<Pressable
+				onPress={() => router.push(`/profile/${item.id}`)}
+				accessibilityRole="button"
+				accessibilityLabel={`View ${item.name}'s full profile`}
 				key={item.id}
-				className="relative w-full flex-1 overflow-hidden rounded-3xl">
+				className="relative w-full flex-1 overflow-hidden rounded-3xl active:opacity-95">
 				<View className="absolute inset-0 items-center justify-center bg-blush">
 					<Text className="text-6xl text-wine">{item.name[0]}</Text>
 				</View>
@@ -121,9 +112,8 @@ export default function CardStack() {
 				</View>
 
 				<Pressable
-					accessibilityRole="button"
-					accessibilityLabel={`Open ${item.name}'s profile`}
-					className="absolute bottom-[114px] right-[18px] h-[34px] w-[34px] items-center justify-center rounded-full bg-white/20 active:opacity-70"
+					pointerEvents="none"
+					className="absolute bottom-[114px] right-[18px] h-[34px] w-[34px] items-center justify-center rounded-full bg-white/20"
 					style={{zIndex: 3, elevation: 3}}>
 					<ArrowUpRightIcon />
 				</Pressable>
@@ -145,7 +135,7 @@ export default function CardStack() {
 					)}
 					<Text className="text-sm text-white">“{item.bio}”</Text>
 				</View>
-			</View>
+			</Pressable>
 
 			<View className="flex-row justify-center gap-[38px]">
 				<Pressable
