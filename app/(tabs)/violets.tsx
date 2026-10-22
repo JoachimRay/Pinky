@@ -160,17 +160,15 @@ export default function VioletsScreen() {
 					sent.map((profile) => {
 						const isMatch = matchIds.has(profile.id);
 						return (
-							<Pressable
+							<View
 								key={profile.id}
-								accessibilityRole="button"
+								accessible
 								accessibilityLabel={
 									isMatch
-										? `${profile.name}, pinky promise. Open chat`
+										? `${profile.name}, pinky promise`
 										: `${profile.name}, waiting for a violet back`
 								}
-								disabled={!isMatch}
-								onPress={() => openChat(profile)}
-								className="flex-row items-center gap-3 rounded-[18px] border border-cream bg-white py-3 pl-3 pr-3.5 active:opacity-70">
+								className="flex-row items-center gap-3 rounded-[18px] border border-cream bg-white py-3 pl-3 pr-3.5">
 								<Photo
 									profile={profile}
 									style={{width: 44, height: 44, borderRadius: 22}}
@@ -197,7 +195,7 @@ export default function VioletsScreen() {
 										<Text className="text-xs text-muted">Waiting</Text>
 									</View>
 								)}
-							</Pressable>
+							</View>
 						);
 					})
 				)}
