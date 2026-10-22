@@ -11,4 +11,10 @@ export type Profile = {
 	distance?: string;
 	intention?: string;
 	verified?: boolean;
+	occupation?: string;
+	location?: string;
+	secondaryPhotoUri?: string;
+	sharedInterests?: string[];
+	firstDatePrompt?: string;
+	profileNote?: string;
 };

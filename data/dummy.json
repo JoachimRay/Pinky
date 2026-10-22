@@ -9,7 +9,10 @@
 		"intention": "Looking for a relationship",
 		"verified": true,
 		"bio": "I love reading and watching birds across the seat",
-		"interests": ["reading", "traveling", "coding"]
+		"interests": ["reading", "traveling", "coding"],
+		"sharedInterests": ["reading", "coding"],
+		"firstDatePrompt": "A quiet café, a good bookshop, and a walk with no rush.",
+		"profileNote": "I remember the little details and always save you the last page-turner."
 	},
 	{
 		"id": 2,
@@ -21,7 +24,10 @@
 		"intention": "Open to see where it goes",
 		"mutualLike": true,
 		"bio": "Animes, Manga, Dave",
-		"interests": ["painting", "music", "hiking"]
+		"interests": ["painting", "music", "hiking"],
+		"sharedInterests": ["music", "hiking"],
+		"firstDatePrompt": "Live music somewhere cozy, then a late-night snack.",
+		"profileNote": "Send me a song you love and I will give it a proper listen."
 	},
 	{
 		"id": 3,
@@ -33,7 +39,10 @@
 		"intention": "Looking for a relationship",
 		"verified": true,
 		"bio": "Coffee and some good music makes the dream work",
-		"interests": ["photography", "cooking", "yoga"]
+		"interests": ["photography", "cooking", "yoga"],
+		"sharedInterests": ["cooking", "photography"],
+		"firstDatePrompt": "Cook something new together and see what we accidentally invent.",
+		"profileNote": "A thoughtful question and a homemade meal go a long way."
 	},
 	{
 		"id": 4,
@@ -45,6 +54,9 @@
 		"intention": "Something casual",
 		"bio": "Chasing rings",
 		"interests": ["reading", "wine tasting", "chess"],
+		"sharedInterests": ["reading", "chess"],
+		"firstDatePrompt": "A bookstore browse followed by a friendly chess match.",
+		"profileNote": "I appreciate curiosity, kind humor, and a little friendly competition.",
 		"mutualLike": true
 	},
 	{
@@ -57,7 +69,10 @@
 		"intention": "Looking for a relationship",
 		"verified": true,
 		"bio": "Roses are red, violets are blue",
-		"interests": ["cars", "anime", "siomai"]
+		"interests": ["cars", "anime", "siomai"],
+		"sharedInterests": ["anime", "siomai"],
+		"firstDatePrompt": "Anime talk over dumplings, with bonus points for good recommendations.",
+		"profileNote": "Remember my favorite snack and you are already winning."
 	},
 	{
 		"id": 6,
@@ -68,7 +83,10 @@
 		"distance": "8 miles away",
 		"intention": "New friends first",
 		"bio": "Life is a highway",
-		"interests": ["singing", "planting", "songwriting"]
+		"interests": ["singing", "planting", "songwriting"],
+		"sharedInterests": ["singing", "songwriting"],
+		"firstDatePrompt": "A plant market stroll, then trade favorite songs over coffee.",
+		"profileNote": "Small acts of encouragement make the biggest difference."
 	},
 	{
 		"id": 7,
@@ -80,6 +98,9 @@
 		"intention": "Something casual",
 		"bio": "Do you care if I don't know what to say",
 		"interests": ["Blink-182", "gaming", "Dota 2"],
+		"sharedInterests": ["gaming", "Blink-182"],
+		"firstDatePrompt": "Arcade games, a playlist swap, and a rematch if you win.",
+		"profileNote": "Good banter and remembering the tiny things are my favorite combo.",
 		"mutualLike": true
 	},
 	{
@@ -91,7 +112,10 @@
 		"distance": "5 miles away",
 		"intention": "Looking for a relationship",
 		"bio": "Reality is illusion",
-		"interests": ["cooking", "reading", "museums"]
+		"interests": ["cooking", "reading", "museums"],
+		"sharedInterests": ["reading", "museums"],
+		"firstDatePrompt": "Pick a museum exhibit, then find dinner inspired by it.",
+		"profileNote": "Tell me what you are excited about lately; I love the details."
 	},
 	{
 		"id": 9,
@@ -104,6 +128,9 @@
 		"verified": true,
 		"bio": "Usually looking for live music, a new recipe, or a reason to dance.",
 		"interests": ["music", "cooking", "dance"],
+		"sharedInterests": ["music", "dance"],
+		"firstDatePrompt": "Make a playlist together, cook something, and dance in the kitchen.",
+		"profileNote": "I notice the little things and believe joy is better when shared.",
 		"mutualLike": true
 	},
 	{
@@ -115,6 +142,9 @@
 		"distance": "7 miles away",
 		"intention": "New friends first",
 		"bio": "I spend my free time sketching, exploring parks, and trying new tea.",
-		"interests": ["sketching", "parks", "tea"]
+		"interests": ["sketching", "parks", "tea"],
+		"sharedInterests": ["parks", "tea"],
+		"firstDatePrompt": "Tea to go, a slow park walk, and sketching whatever catches our eye.",
+		"profileNote": "A calm afternoon and someone who listens make me happy."
 	}
 ]
