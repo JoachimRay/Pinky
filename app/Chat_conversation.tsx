@@ -7,18 +7,19 @@ import { profileImages } from "@/data/profile-images";
 import { useDemoSession, type RewriteStyle } from "@/lib/demo-session";
 import { localDateKey } from "@/lib/suggestions";
 import { router, useFocusEffect, useLocalSearchParams } from "expo-router";
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
-	ActivityIndicator,
-	Image,
-	KeyboardAvoidingView,
-	Platform,
-	Pressable,
-	ScrollView,
-	StyleSheet,
-	Text,
-	TextInput,
-	View,
+  ActivityIndicator,
+  Animated,
+  Image,
+  KeyboardAvoidingView,
+  Platform,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
@@ -30,12 +31,12 @@ type SuggestionsApiResponse = {
   suggestions: [string, string, string];
 };
 
-type RewriteApiResponse = {message: string};
+type RewriteApiResponse = { message: string };
 
-const REWRITE_STYLES: {value: RewriteStyle; label: string}[] = [
-  {value: "warm", label: "Warm"},
-  {value: "playful", label: "Playful"},
-  {value: "flirty", label: "Flirty"},
+const REWRITE_STYLES: { value: RewriteStyle; label: string }[] = [
+  { value: "warm", label: "Warm" },
+  { value: "playful", label: "Playful" },
+  { value: "flirty", label: "Flirty" },
 ];
 
 function isSuggestionsApiResponse(
@@ -94,9 +95,27 @@ export default function ChatConversationScreen() {
   const [isSuggestionsVisible, setIsSuggestionsVisible] = useState(true);
   const [suggestionError, setSuggestionError] = useState("");
   const [isRewriting, setIsRewriting] = useState(false);
+  const [isMatchTyping, setIsMatchTyping] = useState(false);
   const [rewriteError, setRewriteError] = useState("");
   const generationLock = useRef(false);
+  const typingTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const canSend = draft.trim().length > 0;
+
+  const showMatchTyping = useCallback(() => {
+    if (typingTimer.current) clearTimeout(typingTimer.current);
+    setIsMatchTyping(true);
+    typingTimer.current = setTimeout(() => {
+      setIsMatchTyping(false);
+      typingTimer.current = null;
+    }, 1800);
+  }, []);
+
+  useEffect(
+    () => () => {
+      if (typingTimer.current) clearTimeout(typingTimer.current);
+    },
+    [],
+  );
 
   function goBackToChats() {
     if (router.canGoBack()) {
@@ -128,8 +147,8 @@ export default function ChatConversationScreen() {
               interests: profile.interests,
             },
             history: messages
-              .filter(({sender}) => sender !== "system")
-              .map(({sender, text}) => ({sender, text})),
+              .filter(({ sender }) => sender !== "system")
+              .map(({ sender, text }) => ({ sender, text })),
           }),
         });
 
@@ -184,6 +203,7 @@ export default function ChatConversationScreen() {
     if (!rewriteSettings.enabled) {
       sendMessage(profile.id, trimmed);
       setDraft("");
+      showMatchTyping();
       return;
     }
 
@@ -192,12 +212,14 @@ export default function ChatConversationScreen() {
     try {
       const response = await fetch("/api/rewrite", {
         method: "POST",
-        headers: {"Content-Type": "application/json"},
-        body: JSON.stringify({text: trimmed, style: rewriteSettings.style}),
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ text: trimmed, style: rewriteSettings.style }),
       });
       if (!response.ok) {
         const details = await response.text();
-        throw new Error(`Rewrite request failed: ${response.status} ${details}`);
+        throw new Error(
+          `Rewrite request failed: ${response.status} ${details}`,
+        );
       }
 
       const result: unknown = await response.json();
@@ -207,9 +229,12 @@ export default function ChatConversationScreen() {
 
       sendMessage(profile.id, result.message.trim(), rewriteSettings.style);
       setDraft("");
+      showMatchTyping();
     } catch (error) {
       console.error("[rewrite] request failed", error);
-      setRewriteError("Could not rewrite your message. Your draft is still here.");
+      setRewriteError(
+        "Could not rewrite your message. Your draft is still here.",
+      );
     } finally {
       setIsRewriting(false);
     }
@@ -339,12 +364,19 @@ export default function ChatConversationScreen() {
               </Text>
               {message.rewriteStyle ? (
                 <Text style={styles.rewriteMessageIndicator}>
-                  AI rewrite · {REWRITE_STYLES.find((item) => item.value === message.rewriteStyle)?.label}
+                  AI rewrite ·{" "}
+                  {
+                    REWRITE_STYLES.find(
+                      (item) => item.value === message.rewriteStyle,
+                    )?.label
+                  }
                 </Text>
               ) : null}
             </View>
           );
         })}
+
+        {isMatchTyping ? <TypingBubble name={profile.name} /> : null}
 
         <View
           accessibilityLabel="Suggested message choices"
@@ -362,19 +394,28 @@ export default function ChatConversationScreen() {
                   hitSlop={8}
                   onPress={() => generateSuggestions(true)}
                 >
-                  <Text style={[styles.refreshText, isGenerating && styles.disabled]}>
+                  <Text
+                    style={[
+                      styles.refreshText,
+                      isGenerating && styles.disabled,
+                    ]}
+                  >
                     Refresh
                   </Text>
                 </Pressable>
               ) : null}
               <Pressable
                 accessibilityRole="button"
-                accessibilityLabel={isSuggestionsVisible ? "Hide suggestions" : "Show suggestions"}
-                accessibilityState={{expanded: isSuggestionsVisible}}
+                accessibilityLabel={
+                  isSuggestionsVisible ? "Hide suggestions" : "Show suggestions"
+                }
+                accessibilityState={{ expanded: isSuggestionsVisible }}
                 hitSlop={8}
                 onPress={() => setIsSuggestionsVisible((visible) => !visible)}
               >
-                <Text style={styles.refreshText}>{isSuggestionsVisible ? "Hide" : "Show"}</Text>
+                <Text style={styles.refreshText}>
+                  {isSuggestionsVisible ? "Hide" : "Show"}
+                </Text>
               </Pressable>
             </View>
           </View>
@@ -440,7 +481,10 @@ export default function ChatConversationScreen() {
           <Pressable
             accessibilityRole="switch"
             accessibilityLabel="AI message rewrite"
-            accessibilityState={{checked: rewriteSettings.enabled, disabled: isRewriting}}
+            accessibilityState={{
+              checked: rewriteSettings.enabled,
+              disabled: isRewriting,
+            }}
             disabled={isRewriting}
             onPress={() => setRewriteEnabled(id, !rewriteSettings.enabled)}
             style={[
@@ -467,7 +511,7 @@ export default function ChatConversationScreen() {
                   <Pressable
                     key={option.value}
                     accessibilityRole="radio"
-                    accessibilityState={{selected, disabled: isRewriting}}
+                    accessibilityState={{ selected, disabled: isRewriting }}
                     disabled={isRewriting}
                     onPress={() => setRewriteStyle(id, option.value)}
                     style={[
@@ -509,11 +553,16 @@ export default function ChatConversationScreen() {
           />
           <Pressable
             accessibilityRole="button"
-            accessibilityLabel={isRewriting ? "Rewriting message" : "Send message"}
+            accessibilityLabel={
+              isRewriting ? "Rewriting message" : "Send message"
+            }
             accessibilityState={{ disabled: !canSend || isRewriting }}
             disabled={!canSend || isRewriting}
             onPress={handleSendMessage}
-            style={[styles.sendButton, (!canSend || isRewriting) && styles.disabled]}
+            style={[
+              styles.sendButton,
+              (!canSend || isRewriting) && styles.disabled,
+            ]}
           >
             {isRewriting ? (
               <ActivityIndicator size="small" color="#FFFFFF" />
@@ -524,6 +573,55 @@ export default function ChatConversationScreen() {
         </View>
       </View>
     </KeyboardAvoidingView>
+  );
+}
+
+function TypingBubble({ name }: { name: string }) {
+  const [dotAnimations] = useState(() => [
+    new Animated.Value(0.35),
+    new Animated.Value(0.35),
+    new Animated.Value(0.35),
+  ]);
+
+  useEffect(() => {
+    const animations = dotAnimations.map((value, index) =>
+      Animated.loop(
+        Animated.sequence([
+          Animated.delay(index * 130),
+          Animated.timing(value, {
+            toValue: 1,
+            duration: 260,
+            useNativeDriver: true,
+          }),
+          Animated.timing(value, {
+            toValue: 0.35,
+            duration: 260,
+            useNativeDriver: true,
+          }),
+          Animated.delay((2 - index) * 130),
+        ]),
+      ),
+    );
+    animations.forEach((animation) => animation.start());
+    return () => animations.forEach((animation) => animation.stop());
+  }, [dotAnimations]);
+
+  return (
+    <View
+      style={styles.typingBubble}
+      accessibilityLabel={`${name} is typing`}
+      accessibilityLiveRegion="polite"
+    >
+      {dotAnimations.map((value, index) => (
+        <Animated.View
+          key={index}
+          style={[
+            styles.typingDot,
+            { opacity: value, transform: [{ scale: value }] },
+          ]}
+        />
+      ))}
+    </View>
   );
 }
 
@@ -627,6 +725,24 @@ const styles = StyleSheet.create({
     alignSelf: "flex-start",
     backgroundColor: palette.bubble,
     borderBottomLeftRadius: 5,
+  },
+  typingBubble: {
+    alignSelf: "flex-start",
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+    minWidth: 58,
+    paddingHorizontal: 15,
+    paddingVertical: 14,
+    borderRadius: 24,
+    borderBottomLeftRadius: 5,
+    backgroundColor: palette.bubble,
+  },
+  typingDot: {
+    width: 7,
+    height: 7,
+    borderRadius: 4,
+    backgroundColor: palette.muted,
   },
   systemNotice: {
     alignSelf: "center",
