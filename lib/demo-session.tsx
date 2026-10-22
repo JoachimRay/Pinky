@@ -1,29 +1,189 @@
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import type { Profile } from "@/types/profile";
-import { createContext, useCallback, useContext, useMemo, useState } from "react";
+import {
+	createContext,
+	useCallback,
+	useContext,
+	useEffect,
+	useMemo,
+	useState,
+} from "react";
+import { localDateKey } from "@/lib/suggestions";
 
 export type Decision = "like" | "pass";
 
-type DemoSession = {
+export type ChatMessage = {
+	id: string;
+	sender: "you" | "match";
+	text: string;
+};
+
+export type SuggestionSet = {
+	kind: "opening" | "follow-up";
+	suggestions: [string, string, string];
+	generatedOn: string;
+	refreshNumber: number;
+};
+
+type SavedSession = {
 	decisions: Record<number, Decision>;
 	matches: Profile[];
+	messagesByMatchId: Record<number, ChatMessage[]>;
+	suggestionSetsByMatchId: Record<number, SuggestionSet | undefined>;
+	simulatedToday: string | null;
+};
+
+type DemoSession = SavedSession & {
+	isHydrated: boolean;
 	decide: (profile: Profile, decision: Decision) => boolean;
+	sendMessage: (matchId: number, text: string) => void;
+	saveSuggestionSet: (matchId: number, set: SuggestionSet) => void;
+	seedDemoConversation: (profile: Profile) => void;
+	advanceDemoDay: () => void;
+};
+
+const STORAGE_KEY = "pinky-demo-session-v1";
+
+const emptySession: SavedSession = {
+	decisions: {},
+	matches: [],
+	messagesByMatchId: {},
+	suggestionSetsByMatchId: {},
+	simulatedToday: null,
 };
 
 const DemoSessionContext = createContext<DemoSession | null>(null);
 
 export function DemoSessionProvider({ children }: { children: React.ReactNode }) {
-	const [decisions, setDecisions] = useState<Record<number, Decision>>({});
-	const [matches, setMatches] = useState<Profile[]>([]);
+	const [session, setSession] = useState<SavedSession>(emptySession);
+	const [isHydrated, setIsHydrated] = useState(false);
 
-	const decide = useCallback((profile: Profile, decision: Decision) => {
-		if (decisions[profile.id]) return false;
-		setDecisions((current) => current[profile.id] ? current : { ...current, [profile.id]: decision });
-		const matched = decision === "like" && Boolean(profile.mutualLike) && !matches.some((match) => match.id === profile.id);
-		if (matched) setMatches((current) => current.some((match) => match.id === profile.id) ? current : [...current, profile]);
-		return matched;
-	}, [decisions, matches]);
+	useEffect(() => {
+		let isMounted = true;
 
-	const value = useMemo(() => ({ decisions, matches, decide }), [decisions, matches, decide]);
+		async function restoreSession() {
+			try {
+				const saved = await AsyncStorage.getItem(STORAGE_KEY);
+				if (saved && isMounted) {
+					setSession({ ...emptySession, ...JSON.parse(saved) });
+				}
+			} catch (error) {
+				console.warn("Could not restore the Pinky demo session", error);
+			} finally {
+				if (isMounted) setIsHydrated(true);
+			}
+		}
+
+		void restoreSession();
+		return () => {
+			isMounted = false;
+		};
+	}, []);
+
+	useEffect(() => {
+		if (!isHydrated) return;
+		void AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(session)).catch((error) =>
+			console.warn("Could not save the Pinky demo session", error),
+		);
+	}, [isHydrated, session]);
+
+	const decide = useCallback(
+		(profile: Profile, decision: Decision) => {
+			if (session.decisions[profile.id]) return false;
+
+			const isNewMatch =
+				decision === "like" &&
+				Boolean(profile.mutualLike) &&
+				!session.matches.some((match) => match.id === profile.id);
+
+			setSession((current) => ({
+				...current,
+				decisions: current.decisions[profile.id]
+					? current.decisions
+					: { ...current.decisions, [profile.id]: decision },
+				matches: isNewMatch && !current.matches.some((match) => match.id === profile.id)
+					? [...current.matches, profile]
+					: current.matches,
+			}));
+
+			return isNewMatch;
+		},
+		[session.decisions, session.matches],
+	);
+
+	const sendMessage = useCallback((matchId: number, text: string) => {
+		const trimmed = text.trim();
+		if (!trimmed) return;
+
+		setSession((current) => ({
+			...current,
+			messagesByMatchId: {
+				...current.messagesByMatchId,
+				[matchId]: [
+					...(current.messagesByMatchId[matchId] ?? []),
+					{
+						id: `${Date.now()}-${Math.random()}`,
+						sender: "you",
+						text: trimmed,
+					},
+				],
+			},
+		}));
+	}, []);
+
+	const saveSuggestionSet = useCallback((matchId: number, set: SuggestionSet) => {
+		setSession((current) => ({
+			...current,
+			suggestionSetsByMatchId: {
+				...current.suggestionSetsByMatchId,
+				[matchId]: set,
+			},
+		}));
+	}, []);
+
+	const seedDemoConversation = useCallback((profile: Profile) => {
+		setSession((current) => ({
+			...current,
+			matches: current.matches.some((match) => match.id === profile.id)
+				? current.matches
+				: [...current.matches, profile],
+			messagesByMatchId: {
+				...current.messagesByMatchId,
+				[profile.id]: [
+					{ id: "demo-you-1", sender: "you", text: "I have a project presentation coming up soon." },
+					{ id: "demo-match-1", sender: "match", text: "That sounds like a big week. What is the presentation about?" },
+					{ id: "demo-you-2", sender: "you", text: "It is about a community garden app I have been designing." },
+				],
+			},
+			suggestionSetsByMatchId: {
+				...current.suggestionSetsByMatchId,
+				[profile.id]: undefined,
+			},
+			simulatedToday: localDateKey(),
+		}));
+	}, []);
+
+	const advanceDemoDay = useCallback(() => {
+		setSession((current) => {
+			const parts = (current.simulatedToday ?? localDateKey()).split("-").map(Number);
+			const nextDay = new Date(parts[0], parts[1] - 1, parts[2] + 1);
+			return { ...current, simulatedToday: localDateKey(nextDay) };
+		});
+	}, []);
+
+	const value = useMemo(
+		() => ({
+			...session,
+			isHydrated,
+			decide,
+			sendMessage,
+			saveSuggestionSet,
+			seedDemoConversation,
+			advanceDemoDay,
+		}),
+		[session, isHydrated, decide, sendMessage, saveSuggestionSet, seedDemoConversation, advanceDemoDay],
+	);
+
 	return <DemoSessionContext.Provider value={value}>{children}</DemoSessionContext.Provider>;
 }
 

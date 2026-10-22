@@ -1,3 +1,5 @@
+import { Profile } from "@/types/profile";
+
 function fallback(
 	name = "",
 	bio = "",
@@ -106,4 +108,36 @@ export async function POST(request: Request) {
 		console.log("[opener] request failed", error);
 		return fallback(name, bio, interests);
 	}
+}
+
+type OpenerResponse = {
+    opener: string;
+    source: "ai" | "fallback";
+
+};
+
+export async function Get_Conversation(profile: Profile): Promise<OpenerResponse>{
+
+    const response  = await fetch("/api/opener", { 
+
+        method: "POST", 
+        headers: {
+            "Content-Type": "application/json"
+        },
+        body: JSON.stringify({ 
+            name: profile.name,
+            bio: profile.bio,
+            interest: profile.interests,
+        }),
+
+
+    });
+
+    if(!response.ok){ 
+        throw new Error("Failed to fetch conversation");
+    }
+
+    const data = await response.json();
+    return data as{opener: string; source: "ai" | "fallback";};
+
 }
