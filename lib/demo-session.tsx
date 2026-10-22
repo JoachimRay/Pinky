@@ -11,11 +11,18 @@ import {
 import { localDateKey } from "@/lib/suggestions";
 
 export type Decision = "like" | "pass";
+export type RewriteStyle = "warm" | "playful" | "flirty";
 
 export type ChatMessage = {
 	id: string;
-	sender: "you" | "match";
+	sender: "you" | "match" | "system";
 	text: string;
+	rewriteStyle?: RewriteStyle;
+};
+
+export type RewriteSettings = {
+	enabled: boolean;
+	style: RewriteStyle;
 };
 
 export type SuggestionSet = {
@@ -30,14 +37,17 @@ type SavedSession = {
 	matches: Profile[];
 	messagesByMatchId: Record<number, ChatMessage[]>;
 	suggestionSetsByMatchId: Record<number, SuggestionSet | undefined>;
+	rewriteSettingsByMatchId: Record<number, RewriteSettings | undefined>;
 	simulatedToday: string | null;
 };
 
 type DemoSession = SavedSession & {
 	isHydrated: boolean;
 	decide: (profile: Profile, decision: Decision) => boolean;
-	sendMessage: (matchId: number, text: string) => void;
+	sendMessage: (matchId: number, text: string, rewriteStyle?: RewriteStyle) => void;
 	saveSuggestionSet: (matchId: number, set: SuggestionSet) => void;
+	setRewriteEnabled: (matchId: number, enabled: boolean) => void;
+	setRewriteStyle: (matchId: number, style: RewriteStyle) => void;
 	seedDemoConversation: (profile: Profile) => void;
 	advanceDemoDay: () => void;
 };
@@ -49,6 +59,7 @@ const emptySession: SavedSession = {
 	matches: [],
 	messagesByMatchId: {},
 	suggestionSetsByMatchId: {},
+	rewriteSettingsByMatchId: {},
 	simulatedToday: null,
 };
 
@@ -111,7 +122,7 @@ export function DemoSessionProvider({ children }: { children: React.ReactNode })
 		[session.decisions, session.matches],
 	);
 
-	const sendMessage = useCallback((matchId: number, text: string) => {
+	const sendMessage = useCallback((matchId: number, text: string, rewriteStyle?: RewriteStyle) => {
 		const trimmed = text.trim();
 		if (!trimmed) return;
 
@@ -125,10 +136,75 @@ export function DemoSessionProvider({ children }: { children: React.ReactNode })
 						id: `${Date.now()}-${Math.random()}`,
 						sender: "you",
 						text: trimmed,
+						...(rewriteStyle ? {rewriteStyle} : {}),
 					},
 				],
 			},
 		}));
+	}, []);
+
+	const setRewriteEnabled = useCallback((matchId: number, enabled: boolean) => {
+		setSession((current) => {
+			const previous = current.rewriteSettingsByMatchId[matchId] ?? {
+				enabled: false,
+				style: "warm" as const,
+			};
+			if (previous.enabled === enabled) return current;
+
+			const notice = enabled
+				? `AI rewrite mode is on (${previous.style} style).`
+				: "AI rewrite mode is off.";
+			return {
+				...current,
+				rewriteSettingsByMatchId: {
+					...current.rewriteSettingsByMatchId,
+					[matchId]: {...previous, enabled},
+				},
+				messagesByMatchId: {
+					...current.messagesByMatchId,
+					[matchId]: [
+						...(current.messagesByMatchId[matchId] ?? []),
+						{
+							id: `system-${Date.now()}-${Math.random()}`,
+							sender: "system",
+							text: notice,
+						},
+					],
+				},
+			};
+		});
+	}, []);
+
+	const setRewriteStyle = useCallback((matchId: number, style: RewriteStyle) => {
+		setSession((current) => {
+			const previous = current.rewriteSettingsByMatchId[matchId] ?? {
+				enabled: false,
+				style: "warm" as const,
+			};
+			if (previous.style === style) return current;
+
+			const messages = current.messagesByMatchId[matchId] ?? [];
+			return {
+				...current,
+				rewriteSettingsByMatchId: {
+					...current.rewriteSettingsByMatchId,
+					[matchId]: {...previous, style},
+				},
+				messagesByMatchId: previous.enabled
+					? {
+							...current.messagesByMatchId,
+							[matchId]: [
+								...messages,
+								{
+									id: `system-${Date.now()}-${Math.random()}`,
+									sender: "system",
+									text: `AI rewrite style changed to ${style}.`,
+								},
+							],
+						}
+					: current.messagesByMatchId,
+			};
+		});
 	}, []);
 
 	const saveSuggestionSet = useCallback((matchId: number, set: SuggestionSet) => {
@@ -178,10 +254,12 @@ export function DemoSessionProvider({ children }: { children: React.ReactNode })
 			decide,
 			sendMessage,
 			saveSuggestionSet,
+			setRewriteEnabled,
+			setRewriteStyle,
 			seedDemoConversation,
 			advanceDemoDay,
 		}),
-		[session, isHydrated, decide, sendMessage, saveSuggestionSet, seedDemoConversation, advanceDemoDay],
+		[session, isHydrated, decide, sendMessage, saveSuggestionSet, setRewriteEnabled, setRewriteStyle, seedDemoConversation, advanceDemoDay],
 	);
 
 	return <DemoSessionContext.Provider value={value}>{children}</DemoSessionContext.Provider>;

@@ -125,7 +125,9 @@ export default function ChatScreen() {
 					</Text>
 					{conversations.map((profile) => {
 						const messages = messagesByMatchId[profile.id] ?? [];
-						const lastMessage = messages[messages.length - 1];
+						const lastMessage = [...messages]
+							.reverse()
+							.find((message) => message.sender !== "system");
 						const isOwn = lastMessage?.sender === "you";
 
 						return (

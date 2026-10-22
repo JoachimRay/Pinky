@@ -1,5 +1,4 @@
 import palette from "@/constants/palette";
-import { DemoSessionProvider } from "@/lib/demo-session";
 import { Tabs } from "expo-router";
 import { StyleSheet, Text, View, type ColorValue } from "react-native";
 
@@ -27,7 +26,6 @@ function tabLabel(text: string) {
 
 export default function TabLayout() {
   return (
-    <DemoSessionProvider>
       <Tabs
         screenOptions={{
           headerShown: false,
@@ -75,7 +73,6 @@ export default function TabLayout() {
           }}
         />
       </Tabs>
-    </DemoSessionProvider>
   );
 }
 
