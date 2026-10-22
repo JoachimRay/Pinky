@@ -47,6 +47,7 @@ type DemoSession = SavedSession & {
 	isHydrated: boolean;
 	decide: (profile: Profile, decision: Decision) => boolean;
 	sendMessage: (matchId: number, text: string, rewriteStyle?: RewriteStyle) => void;
+	receiveDemoReply: (matchId: number, replyId: number, text: string, createdAt: number) => void;
 	saveSuggestionSet: (matchId: number, set: SuggestionSet) => void;
 	setRewriteEnabled: (matchId: number, enabled: boolean) => void;
 	setRewriteStyle: (matchId: number, style: RewriteStyle) => void;
@@ -144,6 +145,26 @@ export function DemoSessionProvider({ children }: { children: React.ReactNode })
 				],
 			},
 		}));
+	}, []);
+
+	const receiveDemoReply = useCallback((matchId: number, replyId: number, text: string, createdAt: number) => {
+		const trimmed = text.trim();
+		if (!trimmed) return;
+		const id = `postman-reply-${replyId}`;
+		setSession((current) => {
+			const messages = current.messagesByMatchId[matchId] ?? [];
+			if (messages.some((message) => message.id === id)) return current;
+			return {
+				...current,
+				messagesByMatchId: {
+					...current.messagesByMatchId,
+					[matchId]: [
+						...messages,
+						{id, sender: "match", text: trimmed, createdAt},
+					],
+				},
+			};
+		});
 	}, []);
 
 	const setRewriteEnabled = useCallback((matchId: number, enabled: boolean) => {
@@ -259,13 +280,14 @@ export function DemoSessionProvider({ children }: { children: React.ReactNode })
 			isHydrated,
 			decide,
 			sendMessage,
+			receiveDemoReply,
 			saveSuggestionSet,
 			setRewriteEnabled,
 			setRewriteStyle,
 			seedDemoConversation,
 			advanceDemoDay,
 		}),
-		[session, isHydrated, decide, sendMessage, saveSuggestionSet, setRewriteEnabled, setRewriteStyle, seedDemoConversation, advanceDemoDay],
+		[session, isHydrated, decide, sendMessage, receiveDemoReply, saveSuggestionSet, setRewriteEnabled, setRewriteStyle, seedDemoConversation, advanceDemoDay],
 	);
 
 	return <DemoSessionContext.Provider value={value}>{children}</DemoSessionContext.Provider>;

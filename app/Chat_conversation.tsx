@@ -25,6 +25,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 const EMPTY_MESSAGES: { sender: "you" | "match"; text: string; id: string }[] =
   [];
+const MOCK_CHAT_SERVER = "http://127.0.0.1:4317";
 
 type SuggestionsApiResponse = {
   kind: "opening" | "follow-up";
@@ -32,6 +33,7 @@ type SuggestionsApiResponse = {
 };
 
 type RewriteApiResponse = { message: string; rewritten: boolean };
+type MockReply = { id: number; matchId: number; text: string; createdAt: number };
 
 const REWRITE_STYLES: { value: RewriteStyle; label: string }[] = [
   { value: "warm", label: "Warm" },
@@ -68,6 +70,23 @@ function isRewriteApiResponse(value: unknown): value is RewriteApiResponse {
   );
 }
 
+function isMockReplyResponse(value: unknown): value is { replies: MockReply[] } {
+  if (typeof value !== "object" || value === null) return false;
+  const replies = (value as Record<string, unknown>).replies;
+  return (
+    Array.isArray(replies) &&
+    replies.every(
+      (reply) =>
+        typeof reply === "object" &&
+        reply !== null &&
+        Number.isSafeInteger((reply as Record<string, unknown>).id) &&
+        Number.isSafeInteger((reply as Record<string, unknown>).matchId) &&
+        typeof (reply as Record<string, unknown>).text === "string" &&
+        typeof (reply as Record<string, unknown>).createdAt === "number",
+    )
+  );
+}
+
 export default function ChatConversationScreen() {
   const { matchId } = useLocalSearchParams<{ matchId: string }>();
   const {
@@ -77,6 +96,7 @@ export default function ChatConversationScreen() {
     simulatedToday,
     isHydrated,
     sendMessage,
+    receiveDemoReply,
     saveSuggestionSet,
     advanceDemoDay,
     rewriteSettingsByMatchId,
@@ -87,6 +107,7 @@ export default function ChatConversationScreen() {
   const scrollRef = useRef<ScrollView>(null);
   const id = Number(matchId);
   const profile = matches.find((item) => item.id === id);
+  const activeMatchId = profile?.id;
   const messages = messagesByMatchId[id] ?? EMPTY_MESSAGES;
   const conversationHistory = useMemo(
     () => messages.filter(({ sender }) => sender !== "system"),
@@ -106,6 +127,7 @@ export default function ChatConversationScreen() {
   const [rewriteError, setRewriteError] = useState("");
   const [rewriteNeedsChoice, setRewriteNeedsChoice] = useState(false);
   const generationLock = useRef(false);
+  const lastMockReplyId = useRef(0);
   const canSend = draft.trim().length > 0;
 
   function goBackToChats() {
@@ -115,6 +137,43 @@ export default function ChatConversationScreen() {
       router.replace("/(tabs)/Chat_Logs");
     }
   }
+
+  useEffect(() => {
+    if (!isHydrated || activeMatchId === undefined) return;
+
+    let isActive = true;
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    lastMockReplyId.current = 0;
+
+    async function pollForMockReplies() {
+      try {
+        const response = await fetch(
+          `${MOCK_CHAT_SERVER}/replies?matchId=${activeMatchId}&after=${lastMockReplyId.current}`,
+          { cache: "no-store" },
+        );
+        if (!response.ok) throw new Error(`Mock reply poll failed: ${response.status}`);
+        const payload: unknown = await response.json();
+        if (isMockReplyResponse(payload)) {
+          for (const reply of payload.replies) {
+            lastMockReplyId.current = Math.max(lastMockReplyId.current, reply.id);
+            if (reply.matchId === activeMatchId) {
+              receiveDemoReply(activeMatchId, reply.id, reply.text, reply.createdAt);
+            }
+          }
+        }
+      } catch {
+        // Keep polling while the local Postman reply server is starting or restarting.
+      } finally {
+        if (isActive) timer = setTimeout(pollForMockReplies, 1500);
+      }
+    }
+
+    void pollForMockReplies();
+    return () => {
+      isActive = false;
+      if (timer) clearTimeout(timer);
+    };
+  }, [isHydrated, activeMatchId, receiveDemoReply]);
 
   const generateSuggestions = useCallback(
     async (forceRefresh = false) => {
