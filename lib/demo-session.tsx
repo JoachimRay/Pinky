@@ -29,6 +29,7 @@ export type SuggestionSet = {
 	kind: "opening" | "follow-up";
 	suggestions: [string, string, string];
 	generatedOn: string;
+	historyMessageCount: number;
 	refreshNumber: number;
 };
 

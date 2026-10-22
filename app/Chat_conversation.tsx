@@ -7,7 +7,7 @@ import { profileImages } from "@/data/profile-images";
 import { useDemoSession, type RewriteStyle } from "@/lib/demo-session";
 import { localDateKey } from "@/lib/suggestions";
 import { router, useFocusEffect, useLocalSearchParams } from "expo-router";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Animated,
@@ -84,6 +84,10 @@ export default function ChatConversationScreen() {
   const id = Number(matchId);
   const profile = matches.find((item) => item.id === id);
   const messages = messagesByMatchId[id] ?? EMPTY_MESSAGES;
+  const conversationHistory = useMemo(
+    () => messages.filter(({ sender }) => sender !== "system"),
+    [messages],
+  );
   const suggestionSet = suggestionSetsByMatchId[id];
   const rewriteSettings = rewriteSettingsByMatchId[id] ?? {
     enabled: false,
@@ -128,7 +132,13 @@ export default function ChatConversationScreen() {
   const generateSuggestions = useCallback(
     async (forceRefresh = false) => {
       if (!isHydrated || !profile || generationLock.current) return;
-      if (!forceRefresh && suggestionSet?.generatedOn === today) return;
+      if (
+        !forceRefresh &&
+        suggestionSet?.generatedOn === today &&
+        suggestionSet.historyMessageCount === conversationHistory.length
+      ) {
+        return;
+      }
 
       generationLock.current = true;
       setIsGenerating(true);
@@ -146,9 +156,7 @@ export default function ChatConversationScreen() {
               bio: profile.bio,
               interests: profile.interests,
             },
-            history: messages
-              .filter(({ sender }) => sender !== "system")
-              .map(({ sender, text }) => ({ sender, text })),
+            history: conversationHistory.map(({ sender, text }) => ({ sender, text })),
           }),
         });
 
@@ -169,6 +177,7 @@ export default function ChatConversationScreen() {
           kind: result.kind,
           suggestions: result.suggestions,
           generatedOn: today,
+          historyMessageCount: conversationHistory.length,
           refreshNumber,
         });
       } catch (error) {
@@ -182,7 +191,7 @@ export default function ChatConversationScreen() {
     [
       id,
       isHydrated,
-      messages,
+      conversationHistory,
       profile,
       saveSuggestionSet,
       suggestionSet,
@@ -213,7 +222,11 @@ export default function ChatConversationScreen() {
       const response = await fetch("/api/rewrite", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ text: trimmed, style: rewriteSettings.style }),
+        body: JSON.stringify({
+          text: trimmed,
+          style: rewriteSettings.style,
+          history: conversationHistory.map(({ sender, text }) => ({ sender, text })),
+        }),
       });
       if (!response.ok) {
         const details = await response.text();

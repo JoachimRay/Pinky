@@ -20,14 +20,36 @@ const styleDirections: Record<RewriteStyle, string> = {
 	flirty: "charming and respectfully flirty",
 };
 
+type ConversationMessage = {sender: "you" | "match"; text: string};
+
 function normalizeMessage(value: string) {
 	return value.trim().toLocaleLowerCase().replace(/[.!?\s]+$/g, "");
 }
 
-async function askOllama(text: string, style: RewriteStyle, retry: boolean) {
+function hasGenericOpenerDrift(value: string, source: string) {
+	const normalizedValue = value.toLocaleLowerCase();
+	const normalizedSource = source.toLocaleLowerCase();
+	const genericOpeners = [
+		"making you smile",
+		"highlight of your week",
+		"looking forward to",
+		"how has your week",
+		"how's your week",
+	];
+	return genericOpeners.some(
+		(phrase) => normalizedValue.includes(phrase) && !normalizedSource.includes(phrase),
+	);
+}
+
+async function askOllama(
+	text: string,
+	style: RewriteStyle,
+	history: ConversationMessage[],
+	retry: boolean,
+) {
 	const instruction = retry
-		? `Your previous answer did not change the draft. Rewrite it with a clearly different wording while preserving its intent. For a greeting, make it a short conversational opener. Do not return the draft verbatim.`
-		: `Rewrite the user's draft in a ${styleDirections[style]} tone. You are rewriting, not proofreading. The result MUST use noticeably different wording from the draft while preserving its intent. Do not invent facts, promises, or events. Keep the result to one concise sentence (under 18 words). For a one-word greeting, turn it into a natural brief opener. Examples for "hey": warm: "Hey! How's your day going?"; playful: "Hey! What's been making you smile?"; flirty: "Hey gorgeous, what are you up to?" Return JSON only as {"message":"..."}.`;
+		? `The previous rewrite was unsuitable. Rewrite the user's exact draft in a ${styleDirections[style]} tone. Preserve the same topic, meaning, and intent. Use the conversation history only to make the wording fit as the user's next message. Do not answer the draft, replace it with a conversation opener, or introduce a new topic. Do not invent facts. Return one concise sentence as JSON: {"message":"..."}.`
+		: `Rewrite the user's exact draft in a ${styleDirections[style]} tone. Preserve its topic, meaning, and intent; do not answer it or replace it with a different message. Use the recent conversation only to make the wording fit naturally as the user's next message. Never turn an observation into an unrelated question, and never use a generic opener unless the draft itself is an opener. Do not add facts, promises, or events. Keep it concise and return only JSON in this shape: {"message":"..."}.`;
 
 	const response = await fetch("http://127.0.0.1:11434/api/chat", {
 		method: "POST",
@@ -42,7 +64,7 @@ async function askOllama(text: string, style: RewriteStyle, retry: boolean) {
 			format: rewriteSchema,
 			messages: [
 				{role: "system", content: instruction},
-				{role: "user", content: JSON.stringify({draft: text, style})},
+				{role: "user", content: JSON.stringify({draft: text, style, recentConversation: history})},
 			],
 		}),
 	} as RequestInit & {connectTimeout: number});
@@ -80,15 +102,32 @@ export async function POST(request: Request) {
 	if (style !== "warm" && style !== "playful" && style !== "flirty") {
 		return Response.json({error: "Choose a valid rewrite style."}, {status: 400});
 	}
+	const history: ConversationMessage[] = Array.isArray(body.history)
+		? body.history
+				.filter(isRecord)
+				.slice(-8)
+				.map((item) => ({
+					sender: item.sender === "match" ? ("match" as const) : ("you" as const),
+					text: typeof item.text === "string" ? item.text.trim().slice(0, 300) : "",
+				}))
+				.filter((item) => item.text.length > 0)
+		: [];
+	const sourceContext = `${text} ${history.map((item) => item.text).join(" ")}`;
 
 	try {
-		let rewritten = await askOllama(text, style, false);
-		if (normalizeMessage(rewritten) === normalizeMessage(text)) {
-			rewritten = await askOllama(text, style, true);
+		let rewritten = await askOllama(text, style, history, false);
+		if (
+			normalizeMessage(rewritten) === normalizeMessage(text) ||
+			hasGenericOpenerDrift(rewritten, sourceContext)
+		) {
+			rewritten = await askOllama(text, style, history, true);
 		}
-		if (normalizeMessage(rewritten) === normalizeMessage(text)) {
+		if (
+			normalizeMessage(rewritten) === normalizeMessage(text) ||
+			hasGenericOpenerDrift(rewritten, sourceContext)
+		) {
 			return Response.json(
-				{error: "The AI returned your original text. Try again or turn rewrite mode off."},
+				{error: "The AI could not rewrite your draft without changing its meaning. Your draft is still available."},
 				{status: 502},
 			);
 		}
