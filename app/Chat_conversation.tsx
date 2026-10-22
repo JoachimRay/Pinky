@@ -1,192 +1,256 @@
 import { useDemoSession } from "@/lib/demo-session";
-import type { Profile } from "@/types/profile";
-import { router, useLocalSearchParams } from "expo-router";
-import { useState } from "react";
-import { Pressable, ScrollView, Text, TextInput, View } from "react-native";
+import { localDateKey, makeDemoSuggestions } from "@/lib/suggestions";
+import { router, useFocusEffect, useLocalSearchParams } from "expo-router";
+import { useCallback, useRef, useState } from "react";
+import {
+	Pressable,
+	ScrollView,
+	StyleSheet,
+	Text,
+	TextInput,
+	View,
+} from "react-native";
 
-type OpenerResponse = {
-  opener: string;
-  source: "ai" | "fallback";
-};
-
-async function requestOpener(profile: Profile): Promise<OpenerResponse> {
-  const response = await fetch("/api/opener", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      name: profile.name,
-      bio: profile.bio,
-      interests: profile.interests,
-    }),
-  });
-
-  if (!response.ok) {
-    throw new Error("The opener request failed");
-  }
-
-  return response.json();
-}
+const EMPTY_MESSAGES: { sender: "you" | "match"; text: string; id: string }[] = [];
 
 export default function ChatConversationScreen() {
-  const { matchId } = useLocalSearchParams<{ matchId: string }>();
-  const { matches, messagesByMatchId, sendMessage } = useDemoSession();
+	const { matchId } = useLocalSearchParams<{ matchId: string }>();
+	const {
+		matches,
+		messagesByMatchId,
+		suggestionSetsByMatchId,
+		simulatedToday,
+		isHydrated,
+		sendMessage,
+		saveSuggestionSet,
+		advanceDemoDay,
+	} = useDemoSession();
+	const id = Number(matchId);
+	const profile = matches.find((item) => item.id === id);
+	const messages = messagesByMatchId[id] ?? EMPTY_MESSAGES;
+	const suggestionSet = suggestionSetsByMatchId[id];
+	const today = simulatedToday ?? localDateKey();
+	const [draft, setDraft] = useState("");
+	const [isGenerating, setIsGenerating] = useState(false);
+	const [suggestionError, setSuggestionError] = useState("");
+	const generationLock = useRef(false);
 
-  const profile = matches.find((item) => item.id === Number(matchId));
-  const messages = profile ? (messagesByMatchId[profile.id] ?? []) : [];
+	const generateSuggestions = useCallback(
+		(forceRefresh = false) => {
+			if (!isHydrated || !profile || generationLock.current) return;
+			if (!forceRefresh && suggestionSet?.generatedOn === today) return;
 
-  const [draft, setDraft] = useState("");
-  const [opener, setOpener] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
-  const [hasRegenerated, setHasRegenerated] = useState(false);
-  const [openerWasSent, setOpenerWasSent] = useState(false);
+			generationLock.current = true;
+			setIsGenerating(true);
+			setSuggestionError("");
 
-  async function handleGenerateOpener(isRegeneration = false) {
-    if (!profile || loading) return;
+			setTimeout(() => {
+				try {
+					const refreshNumber = suggestionSet
+						? suggestionSet.refreshNumber + 1
+						: 0;
+					const result = makeDemoSuggestions(profile, messages, refreshNumber);
+					saveSuggestionSet(id, {
+						...result,
+						generatedOn: today,
+						refreshNumber,
+					});
+				} catch {
+					setSuggestionError("Could not generate suggestions. Try again.");
+				} finally {
+					generationLock.current = false;
+					setIsGenerating(false);
+				}
+			}, 150);
+		},
+		[
+			id,
+			isHydrated,
+			messages,
+			profile,
+			saveSuggestionSet,
+			suggestionSet,
+			today,
+		],
+	);
 
-    setLoading(true);
-    setError("");
+	useFocusEffect(
+		useCallback(() => {
+			generateSuggestions();
+		}, [generateSuggestions]),
+	);
 
-    try {
-      const result = await requestOpener(profile);
-      const suggestion = result.opener?.trim();
+	function handleSendMessage() {
+		const trimmed = draft.trim();
+		if (!profile || !trimmed) return;
+		sendMessage(profile.id, trimmed);
+		setDraft("");
+	}
 
-      if (!suggestion) {
-        setError("No opener came back. Try again.");
-        return;
-      }
+	if (!isHydrated) {
+		return <Text>Loading conversation…</Text>;
+	}
 
-      setOpener(suggestion);
+	if (!profile) {
+		return (
+			<View style={styles.screen}>
+				<Text>This match wasn’t found in the current demo session.</Text>
+				<Pressable accessibilityRole="button" onPress={() => router.back()}>
+					<Text>Back to chats</Text>
+				</Pressable>
+			</View>
+		);
+	}
 
-      if (isRegeneration) {
-        setHasRegenerated(true);
-      }
-    } catch {
-      setError("Couldn’t load an opener. Check your connection and try again.");
-    } finally {
-      setLoading(false);
-    }
-  }
+	return (
+		<View style={styles.screen}>
+			<View style={styles.header}>
+				<Pressable accessibilityRole="button" onPress={() => router.back()}>
+					<Text>Back</Text>
+				</Pressable>
+				<Text>{profile.name}</Text>
+			</View>
 
-  function handleSendMessage(text = draft) {
-    if (!profile) return;
+			<ScrollView
+				style={styles.conversation}
+				contentContainerStyle={styles.conversationContent}
+			>
+				{messages.length === 0 ? (
+					<Text>No messages yet. Choose a suggestion or write your own.</Text>
+				) : null}
 
-    const trimmed = text.trim();
-    if (!trimmed) return;
+				{messages.map((message) => (
+					<View
+						key={message.id}
+						style={[
+							styles.message,
+							message.sender === "you"
+								? styles.ownMessage
+								: styles.matchMessage,
+						]}
+					>
+						<Text>{message.sender}: {message.text}</Text>
+					</View>
+				))}
 
-    sendMessage(profile.id, trimmed);
-    setDraft("");
+				<View
+					accessibilityLabel="Suggested message choices"
+					style={styles.suggestionsBox}
+				>
+					<View style={styles.sectionHeader}>
+						<Text>Suggested messages</Text>
+						<Pressable
+							accessibilityRole="button"
+							disabled={isGenerating}
+							onPress={() => generateSuggestions(true)}
+						>
+							<Text>Refresh</Text>
+						</Pressable>
+					</View>
 
-    if (trimmed === opener) {
-      setOpenerWasSent(true);
-    }
-  }
+					{isGenerating ? <Text>Generating suggestions…</Text> : null}
+					{suggestionError ? (
+						<View>
+							<Text>{suggestionError}</Text>
+							<Pressable onPress={() => generateSuggestions(true)}>
+								<Text>Retry</Text>
+							</Pressable>
+						</View>
+					) : null}
 
-  if (!profile) {
-    return (
-      <View style={{ flex: 1 }}>
-        <Text>This match wasn’t found in the current demo session.</Text>
-        <Pressable accessibilityRole="button" onPress={() => router.back()}>
-          <Text>Back to chats</Text>
-        </Pressable>
-      </View>
-    );
-  }
+					<View style={styles.suggestionList}>
+						{suggestionSet?.suggestions.map((suggestion, index) => (
+							<Pressable
+								key={`${suggestionSet.generatedOn}-${index}-${suggestion}`}
+								accessibilityRole="button"
+								onPress={() => setDraft(suggestion)}
+								style={styles.suggestion}
+							>
+								<Text>{suggestion}</Text>
+							</Pressable>
+						))}
+					</View>
+				</View>
 
-  return (
-    <View style={{ flex: 1 }}>
-      <View>
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel="Back to chats"
-          onPress={() => router.back()}
-        >
-          <Text>Back</Text>
-        </Pressable>
-        <Text>{profile.name}</Text>
-      </View>
+				{__DEV__ ? (
+					<Pressable accessibilityRole="button" onPress={advanceDemoDay}>
+						<Text>Demo: simulate next day</Text>
+					</Pressable>
+				) : null}
+			</ScrollView>
 
-      <ScrollView style={{ flex: 1 }}>
-        {messages.length === 0 && !opener && !loading ? (
-          <View>
-            <Text>You matched with {profile.name}</Text>
-            <Text>Generate an opening line to start chatting.</Text>
-          </View>
-        ) : null}
-
-        {messages.map((message) => (
-          <View key={message.id}>
-            <Text>{message.sender}: {message.text}</Text>
-          </View>
-        ))}
-
-        {loading ? (
-          <Text>Thinking of an opener…</Text>
-        ) : null}
-
-        {error ? (
-          <View>
-            <Text>{error}</Text>
-            <Pressable accessibilityRole="button" onPress={() => handleGenerateOpener(Boolean(opener))}>
-              <Text>Try again</Text>
-            </Pressable>
-          </View>
-        ) : null}
-
-        {opener && !openerWasSent ? (
-          <View>
-            <Text>Suggested opener</Text>
-            <Text>{opener}</Text>
-            <Pressable accessibilityRole="button" onPress={() => handleSendMessage(opener)}>
-              <Text>Send opener</Text>
-            </Pressable>
-
-            {!hasRegenerated ? (
-              <Pressable
-                accessibilityRole="button"
-                disabled={loading}
-                onPress={() => handleGenerateOpener(true)}
-              >
-                <Text>Try another opener</Text>
-              </Pressable>
-            ) : null}
-          </View>
-        ) : null}
-
-        {openerWasSent ? (
-          <Text>Your opening line has been sent.</Text>
-        ) : null}
-      </ScrollView>
-
-      {!opener && !openerWasSent ? (
-        <Pressable
-          accessibilityRole="button"
-          disabled={loading}
-          onPress={() => handleGenerateOpener()}
-        >
-          <Text>{loading ? "Thinking…" : "Generate an opening line"}</Text>
-        </Pressable>
-      ) : null}
-
-      <View>
-        <TextInput
-          value={draft}
-          onChangeText={setDraft}
-          placeholder="Message…"
-          multiline
-          onSubmitEditing={() => handleSendMessage()}
-        />
-
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel="Send message"
-          onPress={() => handleSendMessage()}
-        >
-          <Text>Send</Text>
-        </Pressable>
-      </View>
-    </View>
-  );
+			<View style={styles.composer}>
+				<TextInput
+					value={draft}
+					onChangeText={setDraft}
+					placeholder="Message…"
+					multiline
+					onSubmitEditing={handleSendMessage}
+					style={styles.input}
+				/>
+				<Pressable accessibilityRole="button" onPress={handleSendMessage}>
+					<Text>Send</Text>
+				</Pressable>
+			</View>
+		</View>
+	);
 }
+
+const styles = StyleSheet.create({
+	screen: {
+		flex: 1,
+		paddingHorizontal: 16,
+		paddingTop: 8,
+	},
+	header: {
+		flexDirection: "row",
+		alignItems: "center",
+		gap: 16,
+		paddingBottom: 12,
+	},
+	conversation: {
+		flex: 1,
+	},
+	conversationContent: {
+		gap: 12,
+		paddingVertical: 12,
+	},
+	message: {
+		maxWidth: "85%",
+	},
+	ownMessage: {
+		alignSelf: "flex-end",
+	},
+	matchMessage: {
+		alignSelf: "flex-start",
+	},
+	suggestionsBox: {
+		borderWidth: 1,
+		borderColor: "#999999",
+		padding: 12,
+		marginTop: 12,
+		gap: 8,
+	},
+	sectionHeader: {
+		flexDirection: "row",
+		alignItems: "center",
+		justifyContent: "space-between",
+	},
+	suggestionList: {
+		gap: 8,
+	},
+	suggestion: {
+		paddingVertical: 4,
+	},
+	composer: {
+		flexDirection: "row",
+		alignItems: "flex-end",
+		gap: 8,
+		paddingVertical: 8,
+	},
+	input: {
+		flex: 1,
+		minHeight: 40,
+		maxHeight: 120,
+	},
+});

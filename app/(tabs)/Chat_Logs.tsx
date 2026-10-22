@@ -1,12 +1,29 @@
 import { useDemoSession } from "@/lib/demo-session";
+import dummy from "@/data/dummy.json";
 import { router } from "expo-router";
 import { Pressable, ScrollView, Text, View } from "react-native";
 
 export default function ChatScreen() {
-  const { matches, messagesByMatchId } = useDemoSession();
+  const { matches, messagesByMatchId, seedDemoConversation } = useDemoSession();
 
   return (
     <ScrollView>
+      {__DEV__ ? (
+        <Pressable
+          accessibilityRole="button"
+          onPress={() => {
+            const profile = dummy[0];
+            seedDemoConversation(profile);
+            router.push({
+              pathname: "/Chat_conversation",
+              params: { matchId: String(profile.id) },
+            });
+          }}
+        >
+          <Text>Demo: open a seeded conversation</Text>
+        </Pressable>
+      ) : null}
+
       {matches.length === 0 ? (
         <View>
           <Text>No Chats Yet</Text>
