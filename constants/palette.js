@@ -11,4 +11,5 @@ module.exports = {
 	ink: "#361B24",
 	muted: "#855A59",
 	line: "#EAD3C8",
+	bubble: "#FBEAE0",
 };
