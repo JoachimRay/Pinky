@@ -4,6 +4,7 @@ import {Tabs} from "expo-router";
 import {StyleSheet, Text, View, type ColorValue} from "react-native";
 
 import {LayersIcon} from "@/components/icons/LayersIcon";
+import {ChatIcon} from "@/components/icons/ChatIcon";
 import {VioletOutlineIcon} from "@/components/icons/VioletOutlineIcon";
 
 function tabLabel(text: string) {
@@ -43,6 +44,18 @@ export default function TabLayout() {
 						tabBarIcon: ({focused, color}) => (
 							<View style={[styles.pill, focused && styles.pillActive]}>
 								<LayersIcon color={color} />
+							</View>
+						),
+					}}
+				/>
+				<Tabs.Screen
+					name="chat"
+					options={{
+						tabBarLabel: tabLabel("Chat"),
+						tabBarAccessibilityLabel: "Your Chats",
+						tabBarIcon: ({focused, color}) => (
+							<View style={[styles.pill, focused && styles.pillActive]}>
+								<ChatIcon color={color} />
 							</View>
 						),
 					}}
