@@ -40,15 +40,22 @@ function profileDetails(profile: Profile) {
 }
 
 export default function CardStack() {
-  const [index, setIndex] = useState(0);
+  const [index, setIndex] = useState<number | null>(null);
   const [newMatch, setNewMatch] = useState<Profile | null>(null);
-  const { decide } = useDemoSession();
+  const { decide, decisions, isHydrated } = useDemoSession();
   const { width } = useWindowDimensions();
   const [position] = useState(() => new Animated.ValueXY());
   const [nextCardProgress] = useState(() => new Animated.Value(0));
-  const [cardEntryProgress] = useState(() => new Animated.Value(1));
   const isAnimating = useRef(false);
-  const item = profiles[index];
+  const item = index === null ? undefined : profiles[index];
+
+  useEffect(() => {
+    if (!isHydrated || index !== null) return;
+    const firstUndecidedIndex = profiles.findIndex(
+      (profile) => !decisions[profile.id],
+    );
+    setIndex(firstUndecidedIndex === -1 ? profiles.length : firstUndecidedIndex);
+  }, [decisions, index, isHydrated]);
 
   const finishSwipe = useCallback(
     (direction: "left" | "right", profile: Profile) => {
@@ -61,27 +68,31 @@ export default function CardStack() {
         decide(profile, "pass");
       }
       const toX = direction === "right" ? width + 80 : -width - 80;
-      Animated.timing(position, {
-        toValue: { x: toX, y: 30 },
-        duration: 230,
-        useNativeDriver: true,
-      }).start(({ finished }) => {
+      Animated.parallel([
+        Animated.timing(position, {
+          toValue: { x: toX, y: 30 },
+          duration: 230,
+          useNativeDriver: true,
+        }),
+        Animated.timing(nextCardProgress, {
+          toValue: 1,
+          duration: 230,
+          useNativeDriver: true,
+        }),
+      ]).start(({ finished }) => {
         if (!finished) {
           isAnimating.current = false;
           return;
         }
-        // The next profile reuses these animated values. Reset them before
-        // changing the index so it never renders at the outgoing card's
-        // off-screen position for a frame.
+        // The card behind has already animated into the full-size card position.
+        // Reset only the outgoing card before promoting that preview.
         position.setValue({ x: 0, y: 0 });
-        cardEntryProgress.setValue(0);
-        nextCardProgress.setValue(0);
-        setIndex((currentIndex) => currentIndex + 1);
+        setIndex((currentIndex) => (currentIndex ?? 0) + 1);
         setNewMatch(matched ? profile : null);
         isAnimating.current = false;
       });
     },
-    [cardEntryProgress, decide, nextCardProgress, position, width],
+    [decide, nextCardProgress, position, width],
   );
   const latestItem = useRef(item);
   const latestFinishSwipe = useRef(finishSwipe);
@@ -140,34 +151,27 @@ export default function CardStack() {
   useLayoutEffect(() => {
     if (!item) {
       position.setValue({ x: 0, y: 0 });
-      cardEntryProgress.setValue(1);
       nextCardProgress.setValue(0);
       return;
     }
     if (index === 0) return;
     position.setValue({ x: 0, y: 0 });
-    cardEntryProgress.setValue(0);
-    Animated.spring(cardEntryProgress, {
-      toValue: 1,
-      useNativeDriver: true,
-      stiffness: 170,
-      damping: 20,
-    }).start();
     nextCardProgress.setValue(0);
-    Animated.spring(nextCardProgress, {
-      toValue: 1,
-      useNativeDriver: true,
-      stiffness: 150,
-      damping: 18,
-    }).start();
-  }, [cardEntryProgress, index, item, nextCardProgress, position]);
+  }, [index, item, nextCardProgress, position]);
 
   function handleStartOver() {
     setNewMatch(null);
     nextCardProgress.setValue(0);
-    cardEntryProgress.setValue(1);
     position.setValue({ x: 0, y: 0 });
     setIndex(0);
+  }
+
+  if (index === null) {
+    return (
+      <View className="flex-1 items-center justify-center">
+        <Text className="text-sm text-muted">Loading profiles…</Text>
+      </View>
+    );
   }
 
   if (!item) {
@@ -314,20 +318,7 @@ export default function CardStack() {
           style={[
             styles.card,
             {
-              opacity: cardEntryProgress,
               transform: [
-                {
-                  translateY: cardEntryProgress.interpolate({
-                    inputRange: [0, 1],
-                    outputRange: [14, 0],
-                  }),
-                },
-                {
-                  scale: cardEntryProgress.interpolate({
-                    inputRange: [0, 1],
-                    outputRange: [0.96, 1],
-                  }),
-                },
                 ...position.getTranslateTransform(),
                 { rotate: rotation },
               ],

@@ -31,7 +31,7 @@ type SuggestionsApiResponse = {
   suggestions: [string, string, string];
 };
 
-type RewriteApiResponse = { message: string };
+type RewriteApiResponse = { message: string; rewritten: boolean };
 
 const REWRITE_STYLES: { value: RewriteStyle; label: string }[] = [
   { value: "warm", label: "Warm" },
@@ -61,7 +61,11 @@ function isSuggestionsApiResponse(
 function isRewriteApiResponse(value: unknown): value is RewriteApiResponse {
   if (typeof value !== "object" || value === null) return false;
   const result = value as Record<string, unknown>;
-  return typeof result.message === "string" && result.message.trim().length > 0;
+  return (
+    typeof result.message === "string" &&
+    result.message.trim().length > 0 &&
+    typeof result.rewritten === "boolean"
+  );
 }
 
 export default function ChatConversationScreen() {
@@ -221,7 +225,14 @@ export default function ChatConversationScreen() {
         throw new Error("The rewrite response was not valid.");
       }
 
-      sendMessage(profile.id, result.message.trim(), rewriteSettings.style);
+      if (result.rewritten) {
+        sendMessage(profile.id, result.message.trim(), rewriteSettings.style);
+      } else {
+        sendMessage(profile.id, trimmed);
+        setRewriteError(
+          "AI couldn't safely rewrite that, so your original message was sent.",
+        );
+      }
       setDraft("");
     } catch (error) {
       console.error("[rewrite] request failed", error);
