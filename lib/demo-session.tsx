@@ -47,6 +47,7 @@ type DemoSession = SavedSession & {
 	isHydrated: boolean;
 	decide: (profile: Profile, decision: Decision) => boolean;
 	sendMessage: (matchId: number, text: string, rewriteStyle?: RewriteStyle) => void;
+	receiveMessage: (matchId: number, message: ChatMessage) => void;
 	saveSuggestionSet: (matchId: number, set: SuggestionSet) => void;
 	setRewriteEnabled: (matchId: number, enabled: boolean) => void;
 	setRewriteStyle: (matchId: number, style: RewriteStyle) => void;
@@ -102,7 +103,8 @@ export function DemoSessionProvider({ children }: { children: React.ReactNode })
 
 	const decide = useCallback(
 		(profile: Profile, decision: Decision) => {
-			if (session.decisions[profile.id]) return false;
+			if (!isHydrated || session.decisions[profile.id] === "like" ||
+				session.decisions[profile.id] === decision) return false;
 
 			const isNewMatch =
 				decision === "like" &&
@@ -111,7 +113,7 @@ export function DemoSessionProvider({ children }: { children: React.ReactNode })
 
 			setSession((current) => ({
 				...current,
-				decisions: current.decisions[profile.id]
+				decisions: current.decisions[profile.id] === "like"
 					? current.decisions
 					: { ...current.decisions, [profile.id]: decision },
 				matches: isNewMatch && !current.matches.some((match) => match.id === profile.id)
@@ -121,8 +123,23 @@ export function DemoSessionProvider({ children }: { children: React.ReactNode })
 
 			return isNewMatch;
 		},
-		[session.decisions, session.matches],
+		[isHydrated, session.decisions, session.matches],
 	);
+
+	const receiveMessage = useCallback((matchId: number, message: ChatMessage) => {
+		setSession((current) => {
+			if (!current.matches.some((match) => match.id === matchId)) return current;
+			const messages = current.messagesByMatchId[matchId] ?? [];
+			if (messages.some((item) => item.id === message.id)) return current;
+			return {
+				...current,
+				messagesByMatchId: {
+					...current.messagesByMatchId,
+					[matchId]: [...messages, message],
+				},
+			};
+		});
+	}, []);
 
 	const sendMessage = useCallback((matchId: number, text: string, rewriteStyle?: RewriteStyle) => {
 		const trimmed = text.trim();
@@ -259,13 +276,14 @@ export function DemoSessionProvider({ children }: { children: React.ReactNode })
 			isHydrated,
 			decide,
 			sendMessage,
+			receiveMessage,
 			saveSuggestionSet,
 			setRewriteEnabled,
 			setRewriteStyle,
 			seedDemoConversation,
 			advanceDemoDay,
 		}),
-		[session, isHydrated, decide, sendMessage, saveSuggestionSet, setRewriteEnabled, setRewriteStyle, seedDemoConversation, advanceDemoDay],
+		[session, isHydrated, decide, sendMessage, receiveMessage, saveSuggestionSet, setRewriteEnabled, setRewriteStyle, seedDemoConversation, advanceDemoDay],
 	);
 
 	return <DemoSessionContext.Provider value={value}>{children}</DemoSessionContext.Provider>;

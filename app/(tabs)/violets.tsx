@@ -134,7 +134,9 @@ export default function VioletsScreen() {
 								<Pressable
 									accessibilityRole="button"
 									accessibilityLabel={`Send a violet back to ${profile.name}`}
-									onPress={() => decide(profile, "like")}
+									onPress={() => {
+										if (decide(profile, "like")) openChat(profile);
+									}}
 									className="mx-3 mt-2 flex-row items-center justify-center gap-1.5 rounded-full bg-violet py-[9px] active:opacity-70">
 									<VioletIcon width={14} height={14} />
 									<Text className="text-[13px] text-shell" style={semibold}>

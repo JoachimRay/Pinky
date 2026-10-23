@@ -201,6 +201,31 @@ route uses `qwen3:4b`.
 npm start
 ```
 
+To inject incoming match messages during development, run these in separate terminals:
+
+```bash
+npm run web
+# In a second terminal:
+npm run mock-chat
+```
+
+Open a matched conversation. In Postman, POST JSON to
+`http://127.0.0.1:4317/replies`:
+
+```json
+{"matchId": 2, "text": "It went well! What have you been working on?"}
+```
+
+Use the match's ID from `data/dummy.json`. The focused chat polls through
+`/api/replies` about every 1.5 seconds. The local queue is temporary and each
+GET consumes that match's queued replies; delivered messages persist in Pinky.
+The proxy keeps the local server address on the development computer, including
+when using a phone. Mock polling and the proxy are disabled in production.
+
+Matches and decisions are stored on each device, not synced between devices.
+Only profiles with `mutualLike: true` match when you send a Violet. After
+Start over, a previously passed profile can receive a Violet and match.
+
 Useful targets:
 
 ```bash

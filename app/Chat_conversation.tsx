@@ -77,6 +77,7 @@ export default function ChatConversationScreen() {
     simulatedToday,
     isHydrated,
     sendMessage,
+    receiveMessage,
     saveSuggestionSet,
     advanceDemoDay,
     rewriteSettingsByMatchId,
@@ -107,6 +108,42 @@ export default function ChatConversationScreen() {
   const [rewriteNeedsChoice, setRewriteNeedsChoice] = useState(false);
   const generationLock = useRef(false);
   const canSend = draft.trim().length > 0;
+
+  useFocusEffect(useCallback(() => {
+    if (!__DEV__ || !isHydrated || !profile) return;
+    let stopped = false;
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    async function pollReplies() {
+      try {
+        const response = await fetch(`/api/replies?matchId=${id}`);
+        if (response.ok) {
+          const result: unknown = await response.json();
+          if (result && typeof result === "object" && "replies" in result &&
+              Array.isArray(result.replies)) {
+            for (const reply of result.replies) {
+              if (reply && typeof reply.id === "string" && reply.matchId === id &&
+                  typeof reply.text === "string" && reply.text.trim() &&
+                  typeof reply.createdAt === "number") {
+                receiveMessage(id, {
+                  id: reply.id, sender: "match", text: reply.text,
+                  createdAt: reply.createdAt,
+                });
+              }
+            }
+          }
+        }
+      } catch {
+        // The optional local mock server may not be running yet.
+      } finally {
+        if (!stopped) timer = setTimeout(() => void pollReplies(), 1500);
+      }
+    }
+    void pollReplies();
+    return () => {
+      stopped = true;
+      if (timer) clearTimeout(timer);
+    };
+  }, [id, isHydrated, profile, receiveMessage]));
 
   function goBackToChats() {
     if (router.canGoBack()) {
