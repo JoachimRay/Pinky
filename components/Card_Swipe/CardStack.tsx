@@ -254,22 +254,25 @@ export default function CardStack() {
       >
         <Text className="font-serif text-2xl text-white">PASS</Text>
       </Animated.View>
-      <Pressable
-        pointerEvents="none"
-        className="absolute bottom-[114px] right-[18px] h-[34px] w-[34px] items-center justify-center rounded-full bg-white/20"
-        style={{ zIndex: 3, elevation: 3 }}
-      >
-        <ArrowUpRightIcon />
-      </Pressable>
       <View
         className="absolute bottom-6 left-[22px] right-[22px] items-start gap-2"
         style={{ zIndex: 3, elevation: 3 }}
       >
-        <View className="flex-row items-center gap-2">
-          <Text className="font-serif text-[34px] text-white">
-            {profile.name}, {profile.age}
-          </Text>
-          {profile.verified && <BadgeCheckIcon accessibilityLabel="Verified" />}
+        <View className="w-full flex-row items-center justify-between gap-2">
+          <View className="min-w-0 flex-1 flex-row items-center gap-2">
+            <Text className="font-serif text-[34px] text-white">
+              {profile.name}, {profile.age}
+            </Text>
+            {profile.verified && <BadgeCheckIcon accessibilityLabel="Verified" />}
+          </View>
+          <Pressable
+            onPress={() => router.push(`/profile/${profile.id}`)}
+            accessibilityRole="button"
+            accessibilityLabel={`View ${profile.name}'s full profile`}
+            className="h-[34px] w-[34px] shrink-0 items-center justify-center rounded-full bg-white/20"
+          >
+            <ArrowUpRightIcon />
+          </Pressable>
         </View>
         <Text className="text-[13px] text-white">
           {profileDetails(profile)}
@@ -325,14 +328,9 @@ export default function CardStack() {
             },
           ]}
         >
-          <Pressable
-            onPress={() => router.push(`/profile/${item.id}`)}
-            accessibilityRole="button"
-            accessibilityLabel={`View ${item.name}'s full profile`}
-            className="relative h-full w-full overflow-hidden rounded-3xl active:opacity-95"
-          >
+          <View className="relative h-full w-full overflow-hidden rounded-3xl">
             {cardContent(item)}
-          </Pressable>
+          </View>
         </Animated.View>
       </View>
 
