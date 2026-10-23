@@ -252,32 +252,21 @@ The response includes `"source":"ai"` when OpenRouter succeeds and
 
 ## Judging evidence checklist
 
-| Criterion | Evidence | Status |
-| --- | --- | --- |
-| Implementation completeness | [User journey](#user-journey), [Project status](#project-status), and `app/` screens/API routes | Implemented features and limitations documented |
-| Solution fit | [Technology choices](#technology-choices) | Documented |
-| UX and design | Discover, Chat, Violets, profile, and conversation screens; capture current screenshots for submission | App flow implemented; screenshots/video pending |
-| Security adherence | [AI and suggestion paths](#ai-and-suggestion-paths), [Configuration](#configure-environment-variables) | Secrets excluded from docs; production privacy controls pending |
-| Code quality and structure | [Architecture](#architecture), [Component responsibilities](#component-responsibilities), and [CONTRIBUTING.md](./CONTRIBUTING.md) | Documented |
-| Codebase tooling | [Testing](#testing) | TypeScript and Expo lint commands documented |
-| Testability | [Testing](#testing) and manual smoke-test path | Manual checks documented; automated coverage is limited |
-| Deployment | [Getting started](#getting-started) | Local Expo run documented; distribution build is pending |
-| Scalability | [Project status](#project-status) | Backend, real-time services, and CI/CD are future work |
-| Best use of AI | [AI and suggestion paths](#ai-and-suggestion-paths) | Local Ollama, OpenRouter, and fallback paths documented |
-| License | [License](#license) and [LICENSE](./LICENSE) | MIT License |
-| Progress | [CHANGELOG.md](./CHANGELOG.md) | MVP progress and planned work recorded |
-| Contribution readiness | [CONTRIBUTING.md](./CONTRIBUTING.md), [CODE_OF_CONDUCT.md](./CODE_OF_CONDUCT.md), and GitHub templates | Present |
-
-### Submission evidence still needed
-
-- Add current app screenshots showing Discover, match, Chat, suggestions, and
-  empty/error states.
-- Record and link the one-minute demo video.
-- Re-run documented commands on the submission environment and record results.
-- Confirm no `.env.local` files, API keys, or credentials are included in the
-  submission.
-- Record incomplete production features as follow-up work, not as completed
-  functionality.
+| Criterion                   | Evidence                                                                                                                           | Status                                                          |
+| --------------------------- | ---------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------- |
+| Implementation completeness | [User journey](#user-journey), [Project status](#project-status), and `app/` screens/API routes                                    | Implemented features and limitations documented                 |
+| Solution fit                | [Technology choices](#technology-choices)                                                                                          | Documented                                                      |
+| UX and design               | Discover, Chat, Violets, profile, and conversation screens; capture current screenshots for submission                             | App flow implemented; screenshots/video pending                 |
+| Security adherence          | [AI and suggestion paths](#ai-and-suggestion-paths), [Configuration](#configure-environment-variables)                             | Secrets excluded from docs; production privacy controls pending |
+| Code quality and structure  | [Architecture](#architecture), [Component responsibilities](#component-responsibilities), and [CONTRIBUTING.md](./CONTRIBUTING.md) | Documented                                                      |
+| Codebase tooling            | [Testing](#testing)                                                                                                                | TypeScript and Expo lint commands documented                    |
+| Testability                 | [Testing](#testing) and manual smoke-test path                                                                                     | Manual checks documented; automated coverage is limited         |
+| Deployment                  | [Getting started](#getting-started)                                                                                                | Local Expo run documented; distribution build is pending        |
+| Scalability                 | [Project status](#project-status)                                                                                                  | Backend, real-time services, and CI/CD are future work          |
+| Best use of AI              | [AI and suggestion paths](#ai-and-suggestion-paths)                                                                                | Local Ollama, OpenRouter, and fallback paths documented         |
+| License                     | [License](#license) and [LICENSE](./LICENSE)                                                                                       | MIT License                                                     |
+| Progress                    | [CHANGELOG.md](./CHANGELOG.md)                                                                                                     | MVP progress and planned work recorded                          |
+| Contribution readiness      | [CONTRIBUTING.md](./CONTRIBUTING.md), [CODE_OF_CONDUCT.md](./CODE_OF_CONDUCT.md), and GitHub templates                             | Present                                                         |
 
 ## License
 
