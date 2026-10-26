@@ -42,6 +42,7 @@
   },
   "scripts": {
     "start": "expo start",
+    "mock-chat": "node scripts/mock-chat.mjs",
     "android": "expo start --android",
     "ios": "expo start --ios",
     "web": "expo start --web",

@@ -115,7 +115,8 @@
 		"interests": ["cooking", "reading", "museums"],
 		"sharedInterests": ["reading", "museums"],
 		"firstDatePrompt": "Pick a museum exhibit, then find dinner inspired by it.",
-		"profileNote": "Tell me what you are excited about lately; I love the details."
+		"profileNote": "Tell me what you are excited about lately; I love the details.",
+		"mutualLike": true
 	},
 	{
 		"id": 9,
